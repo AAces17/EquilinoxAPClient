@@ -1,0 +1,29 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <list>
+          <option value="colorama" />
+          <option value="websockets" />
+          <option value="PyYAML" />
+          <option value="jellyfish" />
+          <option value="jinja2" />
+          <option value="schema" />
+          <option value="kivy" />
+          <option value="bsdiff4" />
+          <option value="platformdirs" />
+          <option value="certifi" />
+          <option value="cython" />
+          <option value="cymem" />
+          <option value="orjson" />
+          <option value="typing_extensions" />
+          <option value="pyshortcuts" />
+          <option value="pathspec" />
+          <option value="kivymd" />
+          <option value="Pymem" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
