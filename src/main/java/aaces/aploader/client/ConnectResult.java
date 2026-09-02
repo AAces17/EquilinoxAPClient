@@ -10,8 +10,8 @@ public class ConnectResult {
 
     private final APClient client;
 
-    public ConnectResult(APClient APClient){
-        this.client = APClient;
+    public ConnectResult(APClient client){
+        this.client = client;
     }
     @ArchipelagoEventListener
     public void onConnectResult(ConnectionResultEvent event) {

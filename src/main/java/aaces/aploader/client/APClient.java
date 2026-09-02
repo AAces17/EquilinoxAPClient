@@ -23,11 +23,19 @@ public class APClient extends Client {
         this.setItemsHandlingFlags(ItemsHandling.SEND_ITEMS | ItemsHandling.SEND_OWN_ITEMS | ItemsHandling.SEND_STARTING_INVENTORY);
 
         this.getEventManager().registerListener(new ConnectResult(this));
+        this.getEventManager().registerListener(new ReceiveItem(this, itemManager));
 
         this.setName(slot);
         this.setPassword(password);
     }
 
+    /// Creates the APClient instance and tries to connect to the room.
+    /// @param host the room host (eg, "archipelago.gg:42352")
+    /// @param slot the slot name
+    /// @param password the room password
+    /// @param itemManager the ItemManager instance used by APBridge
+    /// @param locationManager the LocationManager instance used by APBridge
+    /// @return the APClient instance
     public static APClient tryConnect(String host, String slot, String password, ItemManager itemManager, LocationManager locationManager){
         if (Connected()) {
             if (slot.equals(client.getMyName()) && host.equals(lastHostAttempt)){

@@ -116,11 +116,12 @@ public class ArchipelagoGui extends SecondPanelUi {
                                 name = "AP Save";
                             }
 
-                            APBridge.startNewWorld(WorldConfigs.create(smoothnessValue, waterHeight), name, GameMode.NORMAL);
+                            GameManager.sessionManager.startNewWorld(WorldConfigs.create(smoothnessValue, waterHeight), name, GameMode.NORMAL);
+                            APBridge.saveLoaded = true;
                         }
                     } catch (Exception e) {
                         APAgent.log("Error parsing connection info & generating world!");
-                        e.printStackTrace();
+                        APAgent.log(e.getMessage());
                     }
                 }
 

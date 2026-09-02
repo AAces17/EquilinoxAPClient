@@ -74,9 +74,16 @@ public class APBridge {
     private static boolean inGameInitialized = false;
     public static boolean saveLoaded = false;
 
-    /// Methods called by transformers to overwrite/change game behavior
+    // ----------------------------------------------------------------
+    // Methods called by transformers to overwrite/change game behavior
+    // ----------------------------------------------------------------
 
-    // Called on game init
+    /// Called on game init. Stops the game from automatically loading the previous save.
+    /// This is achieved by creating and loading a new world in an invisible SaveSlot (slot 11).
+    /// If the game tries to save this dummy world, it throws an error (but does not crash).
+    /// The game is prevented from saving this dummy session by {@link saveOverride}
+    ///
+    /// @param sm the SessionManager instance being intercepted
     public static void gameManagerInit(SessionManager sm) {
         APAgent.log("DEBUG: GameManager.init() called");
         //sm.loadInitialSession();
@@ -95,11 +102,12 @@ public class APBridge {
             WorldConfigs configs = WorldConfigs.createDefault();
             setSession.invoke(sm, Session.createNewSession(newSaveSlot, configs, GameMode.NORMAL));
         } catch (Exception e) {
+            APAgent.log("\t"+e.getMessage());
             e.printStackTrace();
         }
     }
 
-    // Called every tick
+    /// Called every game tick. The way the game detects entering the game needs to be changed.
     public static void gameManagerUpdate() {
         GameState state = GameManager.getGameState();
         if(state == null){
@@ -109,7 +117,10 @@ public class APBridge {
         }
     }
 
-    // Called when the menu loads (adds main menu AP button)
+    /// Called when the main menu loads. Replaces the "New World" button
+    /// with an Archipelago button.
+    ///
+    /// @param menuPanelGui the GUI we need to modify
     public static void menuPanelGuiInit(MenuPanelGui menuPanelGui){
 
         try{
@@ -157,7 +168,9 @@ public class APBridge {
         }
     }
 
-    // Replaces the version text on the main menu
+    /// Adds the mod version to the game version on the main menu.
+    ///
+    /// @param gameMenuGui the GUI we need to modify
     public static void addVersionText(GameMenuGui gameMenuGui){
         //APAgent.log("set version method called with \n\t" + gameMenuGui.toString());
         Text text = Text.newText("Version " + gameVersion + " -- EqAP Version " + modVersion).setFontSize(UiSettings.LARGE_FONT).create();
@@ -165,12 +178,16 @@ public class APBridge {
         gameMenuGui.addText(text, 0.6F, 0.3F, 1.0F);
     }
 
-    // Called when the main menu "quit" button is pressed
+    /// Called when the game quits. Used for cleanup.
     public static void onApplicationQuit(){
         APClient.tryDisconnect();
     }
 
-    // Intercepts the "claim task" click event to stop the rewards from distributing and to send the AP check
+    /// Replaces the internal task completion handling. Used to prevent
+    /// the game from distributing the normal rewards, and calls {@link trySendTaskCheck}
+    /// to send the proper archipelago check.
+    ///
+    /// @param task the task completed
     public static void onTaskComplete(Task task){
         APAgent.log("task completed: " + task.name);
         //Original complete method:
@@ -217,7 +234,9 @@ public class APBridge {
 
     }
 
-    // Changes the task "rewards" to "- Unlocks an Archipelago Item"
+    /// Replaces the listed rewards for completing a task with "Unlocks an Archipelago Item".
+    ///
+    /// @param taskInfoFrameUi the ui element we add the text to
     public static void rewardsPanelIntercept(TaskInfoFrameUi taskInfoFrameUi){
         TitlePanelUi rewardPanel = new TitlePanelUi(GameText.getText(149), new GuiComponent() {
             @Override
@@ -241,7 +260,13 @@ public class APBridge {
         taskInfoFrameUi.addComponent(rewardPanel, ExtraToolbarGui.X_START, 0.6358824F, 1.0F - 2.0F * ExtraToolbarGui.X_START, 0.23F);
     }
 
-    // Changes the displayed "unlock guide" to designate the item as being in the multiworld, not behind a task
+    /// Called when a locked shop item is clicked on.
+    /// Changes the displayed "unlock guide" on plants/animals to show that the
+    /// item is in the multiworld, not locked behind a task. Still shows the normal
+    /// evolution tree, since only base species are locked in the multiworld.
+    ///
+    /// @param extraInfoGui the existing GUI. We first close the old one, and then create our own
+    /// @param item the shop item whose guide is being modified
     public static void reactToLockedClick(ExtraInfoGui extraInfoGui, BlueprintShopItem item){
         extraInfoGui.close();
         ExtraInfoContent c = new ExtraInfoContent() {
@@ -308,6 +333,9 @@ public class APBridge {
         extraInfoGui.display(GameText.getText(1120), new ArrayList(), new ArrayList(), c);
     }
 
+    /// Called when the game tries to save. We add the room/slot info, the
+    /// received item index, and the queued-but-not-yet-sent location checks
+    /// to the end of the save file.
     public static void saveAPState(BinaryWriter writer){
         APAgent.log("Trying to save the game");
         try {
@@ -330,12 +358,18 @@ public class APBridge {
             }
         } catch (IOException e) {
             APAgent.log("Couldn't save AP info!");
+            APAgent.log("\t"+e.getMessage());
+            e.printStackTrace();
         }
     }
 
+    /// Called when the game tries to load a save file.
+    /// Tries to load the previously saved AP things from a save file. If the save
+    /// file does not contain the expected data, connecting to a room with this save file
+    /// will result in every item being received again.
     public static void loadAPState(BinaryReader reader){
         APAgent.log("trying to load saved ap info");
-
+        saveLoaded = true;
         try {
             host = reader.readString();
             slot = reader.readString();
@@ -348,53 +382,37 @@ public class APBridge {
             for(int i = 0; i < numSavedLocs; i++){
                 locationManager.queueLocation(reader.readInt());
             }
-            saveLoaded = true;
+
             //APAgent.log("Trying to connect: host: "+host+", slot: "+slot+", password: "+password + ", item index: "+itemManager.getIndex());
             //client = APClient.tryConnect(host, slot, password, itemManager, locationManager);
         } catch (Exception e) {
             APAgent.log("couldn't load the saved state (this can happen if trying to load a world created without this mod installed)");
-        }
-    }
-
-    public static void sessionManagerSafeCheckLoaded(SessionManager sm){
-        //APAgent.log("Safe check loaded called!");
-        try{
-            Method checkLoaded = SessionManager.class.getDeclaredMethod("checkLoaded");
-            checkLoaded.setAccessible(true);
-
-            Field loadingSessionField = SessionManager.class.getDeclaredField("loadingSession");
-            loadingSessionField.setAccessible(true);
-
-            if(loadingSessionField.get(sm) != null) {
-                checkLoaded.invoke(sm);
-            }
-        } catch (Exception e) {
+            APAgent.log("\t"+e.getMessage());
             e.printStackTrace();
+
+            itemManager = new ItemManager(0);
+            locationManager = new LocationManager();
         }
     }
 
-    public static void loadSaveSlot(SessionManager sm, int id){
-        try{
-            Field SAVESField = SessionManager.class.getDeclaredField("SAVES");
-            SAVESField.setAccessible(true);
-            Saves SAVES = (Saves) SAVESField.get(sm);
-
-            Method setSession = SessionManager.class.getDeclaredMethod("setSession", Session.class);
-            setSession.setAccessible(true);
-
-            if(saveLoaded) {
-                sm.saveCurrentSession();
-            }
-            SaveSlot slot = SAVES.getSaveSlot(id);
-            setSession.invoke(sm, Session.loadSession(slot));
-        } catch (Exception e){
-            e.printStackTrace();
+    /// Called when the SessionManager tries to save the currently loaded Session. Stops it from saving
+    /// the dummy save created by {@link gameManagerInit} on startup.
+    ///
+    /// @param session the Session we are trying to save
+    /// @return true if the dummy Session is still the current session, or if a non-dummy current session successfully saves
+    public static boolean saveOverride(Session session){
+        if (saveLoaded) {
+            return session.save();
+        } else {
+            return true;
         }
     }
 
+    // -------------------------------------------------
+    // Internal/helper methods for this class or the mod
+    // -------------------------------------------------
 
-    /// Internal/helper methods for this class or the mod
-
+    /// Handles initialization that can't happen until a save is loaded.
     private static void inGameInit(){
         for(Task task : GameManager.getTaskManager().getTasks()){
             task.unlock();
@@ -404,10 +422,18 @@ public class APBridge {
         inGameInitialized = true;
     }
 
+    /// Gets the current version of the AP mod
+    /// @return the mod version
     public static String getModVersion(){
         return modVersion;
     }
 
+    /// Used by the "Archipelago new world" button to initialize the APClient. Probably should
+    /// be renamed.
+    /// @param h the room host (eg, "archipelago.gg:62414")
+    /// @param s the slot name
+    /// @param p the room password
+    /// @return true (was going to change to a success indicator, but the way the Client handles threads is unclear to me)
     public static boolean tryConnectAndGen(String h, String s, String p){
         host = h;
         slot = s;
@@ -423,41 +449,27 @@ public class APBridge {
         return true;
     }
 
-    public static void startNewWorld(WorldConfigs configs, String name, GameMode mode){
-        SessionManager sm = GameManager.sessionManager;
-        if(saveLoaded) sm.saveCurrentSession();
-        try {
-            Field SAVESField = SessionManager.class.getDeclaredField("SAVES");
-            SAVESField.setAccessible(true);
-            Saves SAVES = (Saves) SAVESField.get(sm);
-
-            Method setSession = SessionManager.class.getDeclaredMethod("setSession", Session.class);
-            setSession.setAccessible(true);
-
-            SaveSlot newSave = SAVES.createNewSave();
-            newSave.setName(name);
-            newSave.getInfo().setMode(mode);
-            setSession.invoke(sm, Session.createNewSession(newSave, configs, mode));
-            saveLoaded = true;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
+    /// Called by the {@link onTaskComplete} to try and send the relevant check.
+    ///
+    /// @param task the completed task
+    ///
     public static void trySendTaskCheck(Task task){
         int locId = LocationManager.TaskNameToLocID.get(task.name);
         APAgent.log("Trying to send loc check for task " + task.name + " (id " + locId + ").");
         sendCheck(locId);
     }
 
+    /// Syncs the internal checked location list with the server's checked location list
+    /// @param checkedLocs the list of checked locations provided by the server
     public static void setCheckedLocs(Set<Long> checkedLocs){
         locationManager.setCheckedLocs(checkedLocs);
     }
 
-    private static boolean sendCheck(int id){
-        return sendCheck(id, false);
-    }
-
+    /// Trys to send a location check
+    ///
+    /// @param id the location id to check
+    /// @param force try to send the check even if in the local list of checked locations
+    /// @return true if the check is successfully sent
     private static boolean sendCheck(int id, boolean force){
         if (!APClient.Connected()){
             APAgent.log("Can't send check while disconnected; queueing (id " + id + ")");
@@ -476,6 +488,17 @@ public class APBridge {
         }
     }
 
+    /// Trys to send a location check
+    /// @param id the location id to check
+    /// @return true if the check is successfully sent
+    /// @see sendCheck(int id, boolean force)
+    private static boolean sendCheck(int id){
+        return sendCheck(id, false);
+    }
+
+    /// Tries to send all the queued-but-unsent locations
+    /// @param force try to send the checks even if in the local list of checked locations
+    /// @return true if the queue is successfully emptied (or already empty), false if any check fails to send
     public static boolean tryFlushLocationQueue(boolean force){
         if(!APClient.Connected()){
             APAgent.log("Can't flush the location queue while disconnected!");
@@ -492,12 +515,17 @@ public class APBridge {
         return true;
     }
 
-    /// Methods called by the mod/client to impact the game
+    // ---------------------------------------------------
+    // Methods called by the mod/client to impact the game
+    // ---------------------------------------------------
 
     public static void unlockShopItem(int id){
         GameManager.getShops().unlockItem(id);
     }
 
+    /// Sends the player an in-game notification
+    /// @param title the notification title text
+    /// @param msg the notification body text
     public static void sendNotification(String title, String msg){
         EquilinoxGuis.notify(title, msg, GuiRepository.INFO, null);
     }

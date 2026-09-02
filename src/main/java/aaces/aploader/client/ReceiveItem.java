@@ -7,8 +7,10 @@ import io.github.archipelagomw.parts.NetworkItem;
 public class ReceiveItem {
 
     private final ItemManager itemManager;
+    private final APClient client;
 
-    public ReceiveItem(ItemManager itemManager){
+    public ReceiveItem(APClient client, ItemManager itemManager){
+        this.client = client;
         this.itemManager = itemManager;
     }
 

@@ -22,7 +22,8 @@ public class APAgent {
             new MyKeyboardTransformer(),
             new UnlockGuideUiTransformer(),
             new SessionTransformer(),
-            new SaveInfoPanelInternalTransformer()
+            new SessionManagerTransformer(),
+            new SavesTransformer()
     };
 
     public static void premain(

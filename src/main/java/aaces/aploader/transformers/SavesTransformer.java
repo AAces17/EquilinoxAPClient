@@ -6,7 +6,7 @@ import org.objectweb.asm.*;
 import java.lang.instrument.ClassFileTransformer;
 import java.security.ProtectionDomain;
 
-public class SaveInfoPanelInternalTransformer implements ClassFileTransformer {
+public class SavesTransformer implements ClassFileTransformer {
 
     @Override
     public byte[] transform(
@@ -16,11 +16,11 @@ public class SaveInfoPanelInternalTransformer implements ClassFileTransformer {
             ProtectionDomain protectionDomain,
             byte[] classfileBuffer) {
 
-        if (!"loadWorldScreen/SaveInfoPanel$3$1".equals(className)) {
+        if (!"saves/Saves".equals(className)) {
             return null;
         }
 
-        APAgent.log("Transforming SaveInfoPanel$3$1");
+        APAgent.log("Transforming Saves");
 
         ClassReader reader = new ClassReader(classfileBuffer);
 
@@ -50,11 +50,10 @@ public class SaveInfoPanelInternalTransformer implements ClassFileTransformer {
                         exceptions
                 );
 
-                if ("isLoaded".equals(name)
-                        && "()Z".equals(descriptor)) {
+                if ("<clinit>".equals(name)) {
 
                     APAgent.log(
-                            "Found internal .isLoaded()"
+                            "Found  Saves initialization"
                     );
 
                     return new MethodVisitor(
@@ -63,30 +62,21 @@ public class SaveInfoPanelInternalTransformer implements ClassFileTransformer {
                     ) {
 
                         @Override
-                        public void visitMethodInsn(int opcode,
-                                                    String owner,
-                                                    String name,
-                                                    String descriptor,
-                                                    boolean isInterface) {
+                        public void visitLdcInsn(Object value) {
 
-                            // Stop the auto-save that happens the first time a world is loaded
-                            if ("session/SessionManager".equals(owner) &&
-                                    "loadSaveSlot".equals(name) &&
-                                    "(I)V".equals(descriptor)) {
-
-                                // There should be an instance of SessionManager and an int on the stack
-                                super.visitMethodInsn(
-                                        Opcodes.INVOKESTATIC,
-                                        "aaces/aploader/APBridge",
-                                        "loadSaveSlot",
-                                        "(Lsession/SessionManager;I)V",
-                                        false
-                                );
-
-                            } else {
-                                super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
+                            // Change the folder/file name format that the game searches for.
+                            // This should stop the mod from impacting existing save files, and it should stop
+                            // the game from trying to load an archipelago save when the mod isn't loaded. (which
+                            // would probably cause problems that I don't even want to try and predict, lol)
+                            if (value instanceof String){
+                                String strValue = (String) value;
+                                if("Equilinox_0_Saves".equals(strValue)){
+                                    value = "Equilinox_AP_Saves";
+                                } else if ("Equilinox_0".equals(strValue)){
+                                    value = "Equilinox_AP";
+                                }
                             }
-
+                            super.visitLdcInsn(value);
 
                         }
                     };
