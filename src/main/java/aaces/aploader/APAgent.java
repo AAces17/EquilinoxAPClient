@@ -21,7 +21,8 @@ public class APAgent {
             new TaskInfoFrameUiTransformer(),
             new MyKeyboardTransformer(),
             new UnlockGuideUiTransformer(),
-            new SessionTransformer()
+            new SessionTransformer(),
+            new SaveInfoPanelInternalTransformer()
     };
 
     public static void premain(

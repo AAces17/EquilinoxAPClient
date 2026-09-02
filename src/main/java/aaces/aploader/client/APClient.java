@@ -1,6 +1,7 @@
 package aaces.aploader.client;
 
 import aaces.aploader.APAgent;
+import aaces.aploader.APBridge;
 import io.github.archipelagomw.Client;
 import io.github.archipelagomw.flags.ItemsHandling;
 import tasks.Task;
@@ -8,14 +9,16 @@ import tasks.Task;
 import java.net.URISyntaxException;
 
 public class APClient extends Client {
-    public static boolean Connected = false;
 
     private static APClient client;
 
+    private static String lastHostAttempt = "";
+
     public SlotData slotData;
 
-    public APClient(String slot, String password, ItemManager itemManager){
+    public APClient(String slot, String password, ItemManager itemManager, LocationManager locationManager){
         super();
+
         this.setGame("Equilinox");
         this.setItemsHandlingFlags(ItemsHandling.SEND_ITEMS | ItemsHandling.SEND_OWN_ITEMS | ItemsHandling.SEND_STARTING_INVENTORY);
 
@@ -25,16 +28,25 @@ public class APClient extends Client {
         this.setPassword(password);
     }
 
-    public static void tryConnect(String host, String slot, String password, ItemManager itemManager){
-        if (Connected) return;
+    public static APClient tryConnect(String host, String slot, String password, ItemManager itemManager, LocationManager locationManager){
+        if (Connected()) {
+            if (slot.equals(client.getMyName()) && host.equals(lastHostAttempt)){
+                return client;
+            } else {
+                APAgent.log("Already connected, but got a connect call with different information. Closing the existing connection.");
+                tryDisconnect();
+            }
+        }
         APAgent.log("Trying to connect with host: "+host+", slot: "+slot+", password: "+password);
-        client = new APClient(slot, password, itemManager);
+        client = new APClient(slot, password, itemManager, locationManager);
+        lastHostAttempt = host;
         try {
             client.connect(host);
         } catch (URISyntaxException e) {
             APAgent.log("Couldn't connect!");
             e.printStackTrace();
         }
+        return client;
     }
 
     public SlotData getSlotData() {
@@ -57,13 +69,14 @@ public class APClient extends Client {
     }
 
     public static void tryDisconnect(){
-        if (!Connected) return;
+        if (!Connected()) return;
         APAgent.log("trying to disconnect");
         client.close();
-        Connected = false;
     }
 
-    public static void trySendTaskCheck(Task task){
-
+    public static boolean Connected(){
+        if(client == null) return false;
+        return client.isConnected();
     }
+
 }

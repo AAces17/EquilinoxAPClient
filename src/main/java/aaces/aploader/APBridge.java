@@ -2,6 +2,7 @@ package aaces.aploader;
 
 import aaces.aploader.client.APClient;
 import aaces.aploader.client.ItemManager;
+import aaces.aploader.client.LocationManager;
 import audio.SoundMaestro;
 import blueprints.Blueprint;
 import componentArchitecture.ComponentType;
@@ -22,9 +23,15 @@ import guiRendering.GuiRenderData;
 import guis.GuiComponent;
 import guis.GuiTexture;
 import health.LifeCompBlueprint;
+import io.github.archipelagomw.APResult;
 import languages.GameText;
 import mainGuis.*;
 import org.lwjgl.util.vector.Vector2f;
+import saves.SaveSlot;
+import saves.Saves;
+import session.GameMode;
+import session.Session;
+import session.SessionManager;
 import shopping.BlueprintShopItem;
 import shops.LockedRequirementUi;
 import shops.ShopItem;
@@ -41,29 +48,55 @@ import userInterfaces.TitlePanelUi;
 import utils.BinaryReader;
 import utils.BinaryWriter;
 import utils.MyFile;
+import world.WorldConfigs;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class APBridge {
 
-    private static boolean inGameInitialized = false;
     private static final String gameVersion = "1.7.2";
     private static final String modVersion = "0.0.1";
 
-    private static String host = "";
-    private static String slot = "";
-    private static String password = "";
-    private static ItemManager itemManager;
+    public static String host = "";
+    public static String slot = "";
+    public static String password = "";
+
+    private static ItemManager itemManager = null;
+    private static LocationManager locationManager = null;
+    private static APClient client;
+
+    private static boolean inGameInitialized = false;
+    public static boolean saveLoaded = false;
 
     /// Methods called by transformers to overwrite/change game behavior
 
     // Called on game init
-    public static void gameManagerInit() {
+    public static void gameManagerInit(SessionManager sm) {
+        APAgent.log("DEBUG: GameManager.init() called");
+        //sm.loadInitialSession();
+        try{
+            Field SAVESField = SessionManager.class.getDeclaredField("SAVES");
+            SAVESField.setAccessible(true);
+            Saves SAVES = (Saves) SAVESField.get(sm);
 
+            Constructor<SaveSlot> saveSlotConstructor = SaveSlot.class.getDeclaredConstructor(int.class, String.class, Saves.class);
+            saveSlotConstructor.setAccessible(true);
+
+            Method setSession = SessionManager.class.getDeclaredMethod("setSession", Session.class);
+            setSession.setAccessible(true);
+
+            SaveSlot newSaveSlot = saveSlotConstructor.newInstance(11, "Select/Create Your AP Save", SAVES);
+            WorldConfigs configs = WorldConfigs.createDefault();
+            setSession.invoke(sm, Session.createNewSession(newSaveSlot, configs, GameMode.NORMAL));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     // Called every tick
@@ -81,20 +114,19 @@ public class APBridge {
 
         try{
             Field buttonsField = MenuPanelGui.class.getDeclaredField("buttons");
-
             Field gameMenuField = MenuPanelGui.class.getDeclaredField("gameMenu");
-
             Field superMenuField = MenuPanelGui.class.getDeclaredField("superMenu");
+            Field newWorldButtonField = MenuPanelGui.class.getDeclaredField("newWorldButton");
 
+            newWorldButtonField.setAccessible(true);
             superMenuField.setAccessible(true);
-
             gameMenuField.setAccessible(true);
-
             buttonsField.setAccessible(true);
 
             GameMenuGui gameMenu = (GameMenuGui) gameMenuField.get(menuPanelGui);
-
             GameMenuBackground superMenu = (GameMenuBackground) superMenuField.get(menuPanelGui);
+
+            DnaButtonGui newWorldButton = (DnaButtonGui) newWorldButtonField.get(menuPanelGui);
 
             Method addButton = MenuPanelGui.class.getDeclaredMethod("addButton", int.class, GuiTexture.class, String.class, ClickListener.class);
             addButton.setAccessible(true);
@@ -106,12 +138,15 @@ public class APBridge {
                 }
             };
 
-            DnaButtonGui APButton = (DnaButtonGui) addButton.invoke(menuPanelGui, 8, (new GuiImage(GuiRepository.LINES[3])).getTexture(), "New World (Archipelago)", cl);
+            menuPanelGui.removeComponent(newWorldButton);
+
+            DnaButtonGui APButton = (DnaButtonGui) addButton.invoke(menuPanelGui, 1, (new GuiImage(GuiRepository.LINES[3])).getTexture(), "New World (Archipelago)", cl);
 
             @SuppressWarnings("unchecked")
             List<DnaButtonGui> buttons = (List<DnaButtonGui>) buttonsField.get(menuPanelGui);
 
             buttons.add(APButton);
+            buttons.remove(newWorldButton);
 
             buttonsField.set(menuPanelGui, buttons);
 
@@ -171,7 +206,7 @@ public class APBridge {
             idField.setAccessible(true);
             int id = (int) idField.get(task);
 
-            APClient.trySendTaskCheck(task);
+            trySendTaskCheck(task);
 
             EventManager.TASK_COMPLETE.registerEvent(new EventData(), Integer.toString(id));
         } catch (Exception e) {
@@ -275,12 +310,24 @@ public class APBridge {
 
     public static void saveAPState(BinaryWriter writer){
         APAgent.log("Trying to save the game");
-        //Save the AP connection info
         try {
+            // Save the AP connection info
             writer.writeString(host);
             writer.writeString(slot);
             writer.writeString(password);
-            writer.writeInt(itemManager.getIndex());
+
+            if(itemManager != null) {
+                // Save the current item index to avoid receiving duplicates on reconnect
+                writer.writeInt(itemManager.getIndex());
+            }
+
+            if(locationManager != null) {
+                // Save any queued-but-not-yet-sent location checks
+                writer.writeInt(locationManager.numQueuedLocations());
+                while (locationManager.nonemptyQueue()) {
+                    writer.writeInt(locationManager.popOldestLocation());
+                }
+            }
         } catch (IOException e) {
             APAgent.log("Couldn't save AP info!");
         }
@@ -288,15 +335,60 @@ public class APBridge {
 
     public static void loadAPState(BinaryReader reader){
         APAgent.log("trying to load saved ap info");
+
         try {
             host = reader.readString();
             slot = reader.readString();
             password = reader.readString();
+
             itemManager = new ItemManager(reader.readInt());
-            APAgent.log("Trying to connect: host: "+host+", slot: "+slot+", password: "+password + ", item index: "+itemManager.getIndex());
-            APClient.tryConnect(host, slot, password, itemManager);
+
+            int numSavedLocs = reader.readInt();
+            locationManager = new LocationManager();
+            for(int i = 0; i < numSavedLocs; i++){
+                locationManager.queueLocation(reader.readInt());
+            }
+            saveLoaded = true;
+            //APAgent.log("Trying to connect: host: "+host+", slot: "+slot+", password: "+password + ", item index: "+itemManager.getIndex());
+            //client = APClient.tryConnect(host, slot, password, itemManager, locationManager);
         } catch (Exception e) {
-            APAgent.log("couldn't load the saved state (this happens if trying to load a world created without this mod installed)");
+            APAgent.log("couldn't load the saved state (this can happen if trying to load a world created without this mod installed)");
+        }
+    }
+
+    public static void sessionManagerSafeCheckLoaded(SessionManager sm){
+        //APAgent.log("Safe check loaded called!");
+        try{
+            Method checkLoaded = SessionManager.class.getDeclaredMethod("checkLoaded");
+            checkLoaded.setAccessible(true);
+
+            Field loadingSessionField = SessionManager.class.getDeclaredField("loadingSession");
+            loadingSessionField.setAccessible(true);
+
+            if(loadingSessionField.get(sm) != null) {
+                checkLoaded.invoke(sm);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void loadSaveSlot(SessionManager sm, int id){
+        try{
+            Field SAVESField = SessionManager.class.getDeclaredField("SAVES");
+            SAVESField.setAccessible(true);
+            Saves SAVES = (Saves) SAVESField.get(sm);
+
+            Method setSession = SessionManager.class.getDeclaredMethod("setSession", Session.class);
+            setSession.setAccessible(true);
+
+            if(saveLoaded) {
+                sm.saveCurrentSession();
+            }
+            SaveSlot slot = SAVES.getSaveSlot(id);
+            setSession.invoke(sm, Session.loadSession(slot));
+        } catch (Exception e){
+            e.printStackTrace();
         }
     }
 
@@ -321,11 +413,84 @@ public class APBridge {
         slot = s;
         password = p;
         APAgent.log("Trying to generate a world: host: "+host+", slot: "+slot+", password: "+password);
-        itemManager = new ItemManager(0);
-        APClient.tryConnect(host, slot, password, itemManager);
+        boolean newManagers = itemManager == null || locationManager == null;
+        if(newManagers) {
+            itemManager = new ItemManager(0);
+            locationManager = new LocationManager();
+        }
+
+        client = APClient.tryConnect(host, slot, password, itemManager, locationManager);
         return true;
     }
 
+    public static void startNewWorld(WorldConfigs configs, String name, GameMode mode){
+        SessionManager sm = GameManager.sessionManager;
+        if(saveLoaded) sm.saveCurrentSession();
+        try {
+            Field SAVESField = SessionManager.class.getDeclaredField("SAVES");
+            SAVESField.setAccessible(true);
+            Saves SAVES = (Saves) SAVESField.get(sm);
+
+            Method setSession = SessionManager.class.getDeclaredMethod("setSession", Session.class);
+            setSession.setAccessible(true);
+
+            SaveSlot newSave = SAVES.createNewSave();
+            newSave.setName(name);
+            newSave.getInfo().setMode(mode);
+            setSession.invoke(sm, Session.createNewSession(newSave, configs, mode));
+            saveLoaded = true;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void trySendTaskCheck(Task task){
+        int locId = LocationManager.TaskNameToLocID.get(task.name);
+        APAgent.log("Trying to send loc check for task " + task.name + " (id " + locId + ").");
+        sendCheck(locId);
+    }
+
+    public static void setCheckedLocs(Set<Long> checkedLocs){
+        locationManager.setCheckedLocs(checkedLocs);
+    }
+
+    private static boolean sendCheck(int id){
+        return sendCheck(id, false);
+    }
+
+    private static boolean sendCheck(int id, boolean force){
+        if (!APClient.Connected()){
+            APAgent.log("Can't send check while disconnected; queueing (id " + id + ")");
+            locationManager.queueLocation(id);
+            return false;
+        } else if (locationManager.locAlreadyChecked(id) && !force){
+            return true;
+        } else if (client.checkLocation(id).getCode() == APResult.ResultCode.SUCCESS){
+            APAgent.log("Successfully sent check! (id " + id + ")");
+            locationManager.markChecked(id);
+            return true;
+        } else {
+            APAgent.log("Failed to send location check; queueing (id " + id + ")");
+            locationManager.queueLocation(id);
+            return false;
+        }
+    }
+
+    public static boolean tryFlushLocationQueue(boolean force){
+        if(!APClient.Connected()){
+            APAgent.log("Can't flush the location queue while disconnected!");
+            return false;
+        }
+        while (locationManager.nonemptyQueue()){
+            int id = locationManager.popOldestLocation();
+            if(!sendCheck(id, force)){
+                return false;
+            }
+            locationManager.markChecked(id);
+        }
+        APAgent.log("Successfully flushed the location queue.");
+        return true;
+    }
 
     /// Methods called by the mod/client to impact the game
 

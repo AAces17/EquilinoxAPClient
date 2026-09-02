@@ -8,18 +8,20 @@ import io.github.archipelagomw.network.ConnectionResult;
 
 public class ConnectResult {
 
-    private final APClient APClient;
+    private final APClient client;
 
     public ConnectResult(APClient APClient){
-        this.APClient = APClient;
+        this.client = APClient;
     }
     @ArchipelagoEventListener
     public void onConnectResult(ConnectionResultEvent event) {
-        aaces.aploader.client.APClient.Connected = false;
         if (event.getResult() == ConnectionResult.Success) {
-            APAgent.log("Successfully connected to " + APClient.getConnectedAddress());
-            APClient.slotData = event.getSlotData(SlotData.class);
-            aaces.aploader.client.APClient.Connected = true;
+            APAgent.log("Successfully connected to " + client.getConnectedAddress());
+            client.slotData = event.getSlotData(SlotData.class);
+
+            APBridge.setCheckedLocs(client.getLocationManager().getCheckedLocations());
+
+            APBridge.tryFlushLocationQueue(false);
 
             APBridge.sendNotification("[AP] Connected!", "Successfully connected to the Archipelago server.");
         } else if (event.getResult() == ConnectionResult.InvalidPassword) {

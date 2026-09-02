@@ -98,20 +98,33 @@ public class GameManagerTransformer implements ClassFileTransformer {
                     ) {
 
                         @Override
-                        public void visitInsn(int opcode) {
+                        public void visitMethodInsn(int opcode,
+                                                    String owner,
+                                                    String name,
+                                                    String descriptor,
+                                                    boolean isInterface) {
 
-                            // Insert immediately before RETURN
-                            if (opcode == Opcodes.RETURN) {
+                            // Remove the call to loadInitialSession(), and replace it with our init
+                            if (opcode == Opcodes.INVOKEVIRTUAL &&
+                                    "session/SessionManager".equals(owner) &&
+                                    "loadInitialSession".equals(name) &&
+                                    "()V".equals(descriptor)) {
+
+
+
                                 mv.visitMethodInsn(
                                         Opcodes.INVOKESTATIC,
                                         "aaces/aploader/APBridge",
                                         "gameManagerInit",
-                                        "()V",
+                                        "(Lsession/SessionManager;)V",
                                         false
                                 );
+
+                            } else {
+                                super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
                             }
 
-                            super.visitInsn(opcode);
+
                         }
                     };
                 }

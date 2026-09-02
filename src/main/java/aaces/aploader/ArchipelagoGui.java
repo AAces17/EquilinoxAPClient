@@ -78,14 +78,14 @@ public class ArchipelagoGui extends SecondPanelUi {
     }
 
     private void addConnectButton() {
-        TextButtonUi generateButton = new TextButtonUi("Connect & Gen World", ColourPalette.BASE_BLUE, 1.11111F, ColourPalette.WHITE, 0.2F);
+        TextButtonUi generateButton = new TextButtonUi("Generate World & Connect", ColourPalette.BASE_BLUE, 1.11111F, ColourPalette.WHITE, 0.2F);
         float yPos = GameMenuGui.BACK_BUTTON_POS.y;
         float xPos = 0.35F;
         super.addComponent(generateButton, xPos, yPos, 0.3F, 0.12F);
         generateButton.addListener(new ClickListener() {
             public void eventOccurred(GuiClickEvent event) {
                 if (event.isLeftClick()) {
-                    if (APClient.Connected || ArchipelagoGui.this.generated) {
+                    if (APClient.Connected() || ArchipelagoGui.this.generated) {
                         return;
                     }
 
@@ -116,7 +116,7 @@ public class ArchipelagoGui extends SecondPanelUi {
                                 name = "AP Save";
                             }
 
-                            GameManager.sessionManager.startNewWorld(WorldConfigs.create(smoothnessValue, waterHeight), name, GameMode.NORMAL);
+                            APBridge.startNewWorld(WorldConfigs.create(smoothnessValue, waterHeight), name, GameMode.NORMAL);
                         }
                     } catch (Exception e) {
                         APAgent.log("Error parsing connection info & generating world!");
@@ -131,19 +131,19 @@ public class ArchipelagoGui extends SecondPanelUi {
     private void addHostOption(float xPos, float yPos){
         this.addLabel(xPos, yPos, "Host");
         yPos += 0.08F;
-        this.hostField = this.addTextField(xPos, yPos, "archipelago.gg:12345");
+        this.hostField = this.addTextField(xPos, yPos, APBridge.host.isEmpty() ? "archipelago.gg:12345" : APBridge.host);
     }
 
     private void addSlotOption(float xPos, float yPos){
         this.addLabel(xPos, yPos, "Slot");
         yPos += 0.08F;
-        this.slotField = this.addTextField(xPos, yPos, "Player1");
+        this.slotField = this.addTextField(xPos, yPos, APBridge.slot.isEmpty() ? "Player1" : APBridge.slot);
     }
 
     private void addPasswordOption(float xPos, float yPos){
         this.addLabel(xPos, yPos, "Password");
         yPos += 0.08F;
-        this.passwordField = this.addTextField(xPos, yPos, "");
+        this.passwordField = this.addTextField(xPos, yPos, APBridge.password);
     }
 
     private void addLabel(float xPos, float yPos, String name) {
