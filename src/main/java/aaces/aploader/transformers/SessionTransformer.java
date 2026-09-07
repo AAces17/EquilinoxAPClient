@@ -1,6 +1,7 @@
 package aaces.aploader.transformers;
 
 import aaces.aploader.APAgent;
+import aaces.aploader.APBridge;
 import org.objectweb.asm.*;
 
 import java.lang.instrument.ClassFileTransformer;
@@ -25,7 +26,7 @@ public class SessionTransformer implements ClassFileTransformer {
 
         ClassWriter writer = new ClassWriter(
                 reader,
-                ClassWriter.COMPUTE_MAXS
+                ClassWriter.COMPUTE_FRAMES
         );
 
         ClassVisitor visitor = new ClassVisitor(
@@ -135,6 +136,44 @@ public class SessionTransformer implements ClassFileTransformer {
 
                             // Continue with the call to reader.close();
                             super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
+                        }
+                    };
+                } else if ("update".equals(name)
+                        && "()V".equals(descriptor)) {
+
+                    APAgent.log(
+                            "Found Session.update()"
+                    );
+
+                    return new MethodVisitor(
+                            Opcodes.ASM9,
+                            mv
+                    ) {
+
+                        @Override
+                        public void visitMethodInsn(int opcode,
+                                                    String owner,
+                                                    String name,
+                                                    String descriptor,
+                                                    boolean isInterface) {
+                            //APAgent.log("Inspecting call: " + owner + "." + name + descriptor + " (Opcode: " + opcode + ")");
+                            // wrap the call to updateAutoSave with a checker.
+                            if ("updateAutoSave".equals(name)
+                                    && "()V".equals(descriptor)) {
+
+                                APAgent.log("Found Session.updateAutoSave(), wrapping");
+
+                                // Consume the 'this' off the stack with this call
+                                super.visitMethodInsn(
+                                        Opcodes.INVOKESTATIC,
+                                        "aaces/aploader/APBridge",
+                                        "safeUpdateAutoSave",
+                                        "(Lsession/Session;)V",
+                                        false
+                                );
+                            } else {
+                                super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
+                            }
                         }
                     };
                 }
