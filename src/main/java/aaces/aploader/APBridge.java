@@ -6,9 +6,12 @@ import aaces.aploader.client.LocationManager;
 import audio.SoundMaestro;
 import basics.DisplayManager;
 import blueprints.Blueprint;
+import breedingTraits.FloatTrait;
+import breedingTraits.Trait;
+import breedingTraits.VectorTrait;
+import componentArchitecture.Component;
 import componentArchitecture.ComponentType;
 import events.EventData;
-import events.EventListener;
 import events.EventManager;
 import extraInfoGui.ExtraInfoContent;
 import extraInfoGui.ExtraInfoGui;
@@ -20,13 +23,12 @@ import gameMenu.DnaButtonGui;
 import gameMenu.GameMenuBackground;
 import gameMenu.GameMenuGui;
 import gameMenu.MenuPanelGui;
-import gridLayout.ItemPageGui;
 import guiRendering.GuiRenderData;
 import guis.GuiComponent;
 import guis.GuiTexture;
 import health.LifeCompBlueprint;
+import instances.Entity;
 import io.github.archipelagomw.APResult;
-import io.github.archipelagomw.parts.Game;
 import languages.GameText;
 import mainGuis.*;
 import org.lwjgl.util.vector.Vector2f;
@@ -36,34 +38,24 @@ import session.GameMode;
 import session.Session;
 import session.SessionManager;
 import shopping.BlueprintShopItem;
-import shopping.Shop;
-import shops.LockedRequirementUi;
-import shops.ShopItem;
-import shops.ShopItemGui;
 import taskUi.TaskInfoFrameUi;
 import tasks.CashReward;
 import tasks.Reward;
 import tasks.Task;
 import tasks.TaskState;
-import textures.Texture;
 import unlockGuide.EvolveChainUi;
-import unlockGuide.UnlockGuideUi;
 import userInterfaces.ClickListener;
 import userInterfaces.GuiImage;
 import userInterfaces.TitlePanelUi;
 import utils.BinaryReader;
 import utils.BinaryWriter;
-import utils.MyFile;
 import world.WorldConfigs;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @SuppressWarnings("unchecked")
 public class APBridge {
@@ -82,9 +74,13 @@ public class APBridge {
     private static boolean inGameInitialized = false;
     public static boolean saveLoaded = false;
 
+
+
+
     // ----------------------------------------------------------------
     // Methods called by transformers to overwrite/change game behavior
     // ----------------------------------------------------------------
+
 
     /// Called on game init. Stops the game from automatically loading the previous save.
     /// This is achieved by creating and loading a new world in an invisible SaveSlot (slot 11).
@@ -115,15 +111,16 @@ public class APBridge {
         }
     }
 
-    /// Called every game tick. The way the game detects entering the game needs to be changed.
+
+    /// Called every game tick. The way the mod detects entering the game probably to be changed.
     public static void gameManagerUpdate() {
-        GameState state = GameManager.getGameState();
-        if(state == null){
+        if(GameManager.getGameState() != GameState.GAME_MENU && GameManager.getGameState() != GameState.SPLASH_SCREEN){
             if(!inGameInitialized){
                 inGameInit();
             }
         }
     }
+
 
     /// Called when the main menu loads. Replaces the "New World" button
     /// with an Archipelago button.
@@ -176,6 +173,7 @@ public class APBridge {
         }
     }
 
+
     /// Adds the mod version to the game version on the main menu.
     ///
     /// @param gameMenuGui the GUI we need to modify
@@ -186,10 +184,12 @@ public class APBridge {
         gameMenuGui.addText(text, 0.6F, 0.3F, 1.0F);
     }
 
+
     /// Called when the game quits. Used for cleanup.
     public static void onApplicationQuit(){
         APClient.tryDisconnect();
     }
+
 
     /// Replaces the internal task completion handling. Used to prevent
     /// the game from distributing the normal rewards, and calls {@link trySendTaskCheck}
@@ -233,7 +233,7 @@ public class APBridge {
 
             trySendTaskCheck(task);
 
-            boolean distribute_cash_rewards = APClient.Connected() ? !client.slotData.getMoney_sanity() : true;
+            boolean distribute_cash_rewards = APClient.Connected() ? client.slotData.tasksRewardDP() : true;
 
             if(distribute_cash_rewards) {
                 for (Reward reward : task.getRewards()) {
@@ -252,11 +252,12 @@ public class APBridge {
 
     }
 
+
     /// Replaces the listed rewards for completing a task with "Unlocks an Archipelago Item".
     ///
     /// @param taskInfoFrameUi the ui element we add the text to
     public static void rewardsPanelIntercept(TaskInfoFrameUi taskInfoFrameUi) {
-        boolean showCashRewards = APClient.Connected() ? !client.slotData.getMoney_sanity() : true;
+        boolean showCashRewards = APClient.Connected() ? client.slotData.tasksRewardDP() : true;
 
         TitlePanelUi rewardPanel = new TitlePanelUi(GameText.getText(149), new GuiComponent() {
             @Override
@@ -303,6 +304,7 @@ public class APBridge {
         });
         taskInfoFrameUi.addComponent(rewardPanel, ExtraToolbarGui.X_START, 0.6358824F, 1.0F - 2.0F * ExtraToolbarGui.X_START, 0.23F);
     }
+
 
     /// Called when a locked shop item is clicked on.
     /// Changes the displayed "unlock guide" on plants/animals to show that the
@@ -377,6 +379,7 @@ public class APBridge {
         extraInfoGui.display(GameText.getText(1120), new ArrayList<>(), new ArrayList<>(), c);
     }
 
+
     /// Called when the game tries to save. We add the room/slot info, the
     /// received item index, and the queued-but-not-yet-sent location checks
     /// to the end of the save file.
@@ -406,6 +409,7 @@ public class APBridge {
             e.printStackTrace();
         }
     }
+
 
     /// Called when the game tries to load a save file.
     /// Tries to load the previously saved AP things from a save file. If the save
@@ -440,6 +444,7 @@ public class APBridge {
         saveLoaded = true;
     }
 
+
     /// Called when the SessionManager tries to save the currently loaded Session. Stops it from saving
     /// the dummy save created by {@link gameManagerInit} on startup. (Note, this doesn't apply to the autosave)
     ///
@@ -452,6 +457,7 @@ public class APBridge {
             return true;
         }
     }
+
 
     /// Called when the game tries to autosave.
     /// Stops the game from autosaving the dummy session created by {@link gameManagerInit} on startup.
@@ -471,9 +477,14 @@ public class APBridge {
         }
     }
 
+
+
+
     // -------------------------------------------------
     // Internal/helper methods for this class or the mod
     // -------------------------------------------------
+
+
 
     /// Handles initialization that can't happen until a save is loaded.
     private static void inGameInit(){
@@ -488,15 +499,19 @@ public class APBridge {
         //GameManager.getShops().unlockAll();
 
         EventManager.EVOLUTION.addListener(APBridge::onEvolution);
+        EventManager.POPULATION_ADD.addListener(APBridge::onPopulationAdd);
 
         inGameInitialized = true;
+        APAgent.log("In-game initialized");
     }
+
 
     /// Gets the current version of the AP mod
     /// @return the mod version
     public static String getModVersion(){
         return modVersion;
     }
+
 
     /// Used by the "Archipelago new world" button to initialize the APClient. Probably should
     /// be renamed.
@@ -509,15 +524,12 @@ public class APBridge {
         slot = s;
         password = p;
         APAgent.log("Trying to generate a world: host: "+host+", slot: "+slot+", password: "+password);
-        boolean newManagers = itemManager == null || locationManager == null;
-        if(newManagers) {
-            itemManager = new ItemManager(0);
-            locationManager = new LocationManager();
-        }
-
+        itemManager = new ItemManager(0);
+        locationManager = new LocationManager();
         client = APClient.tryConnect(host, slot, password, itemManager, locationManager);
         return true;
     }
+
 
     /// Called by {@link onTaskComplete} to try and send the relevant check.
     ///
@@ -528,6 +540,7 @@ public class APBridge {
         sendCheck(locId);
     }
 
+
     /// Called by  to try and send the relevant check
     ///
     /// @param species the species evolved
@@ -537,11 +550,13 @@ public class APBridge {
         sendCheck(locId);
     }
 
+
     /// Syncs the internal checked location list with the server's checked location list
     /// @param checkedLocs the list of checked locations provided by the server
     public static void setCheckedLocs(Set<Long> checkedLocs){
         locationManager.setCheckedLocs(checkedLocs);
     }
+
 
     /// Tries to send a location check
     ///
@@ -568,6 +583,7 @@ public class APBridge {
         }
     }
 
+
     /// Tries to send a location check
     /// @param id the location id to check
     /// @return true if the check is successfully sent
@@ -575,6 +591,7 @@ public class APBridge {
     private static boolean sendCheck(int id){
         return sendCheck(id, false);
     }
+
 
     /// Tries to send all the queued-but-unsent locations
     /// @param force try to send the checks even if in the local list of checked locations
@@ -595,6 +612,7 @@ public class APBridge {
         return true;
     }
 
+
     /// Listens for the Evolution event to send the relevant check
     /// @param data the EventData (contains a `Blueprint` object)
     private static void onEvolution(EventData data){
@@ -604,15 +622,64 @@ public class APBridge {
         trySendEvolutionCheck(speciesName);
     }
 
+    /// Listens for the Population Add event to send the relevant check
+    /// @param data always null, but needed for the event
+    private static void onPopulationAdd(EventData data){
+        Map<Integer, Entity> entitiesMap = GameManager.getWorld().getEntityGrid().getWorldEntities();
+        Entity newEntity = entitiesMap.get(Collections.max(entitiesMap.keySet()));
+        APAgent.log("Population add event: ");
+        APAgent.log("Species: " + newEntity.getBlueprint().getName());
+        APAgent.log("New species?: " + newEntity.isNewSpecies());
+        APAgent.log("Id: "+newEntity.getId());
+        for(Trait trait : newEntity.getTraits()){
+            float value = -100f;
+            if (trait instanceof FloatTrait) {
+                value = ((FloatTrait) trait).value;
+            }
+            APAgent.log("Trait: " + trait.blueprint.getName() + ": " + value);
+            if(trait.blueprint.getName().equals("Size")){
+                processNewSpeciesSize(newEntity.getBlueprint().getName(), value * 10);
+            }
+        }
+    }
+
+    /// Called whenever a new entity spawns to check its size.
+    /// @param species The species of the entity that spawned
+    /// @param size The size of the entity that spawned
+    private static void processNewSpeciesSize(String species, float size){
+        if(!saveLoaded) return;
+        if (size >= 1.095){
+            int locId = LocationManager.SpeciesAndSizeToSizeLocID.get(species + "1.10");
+            if(!locationManager.locAlreadyChecked(locId)){
+                APAgent.log("Trying to send 'Size 1.10' check for " + species);
+                if (sendCheck(locId)){
+                    sendNotification("Size check sent!", "Size 1.10 check for " + species + " sent.");
+                }
+            }
+        } else if (size <= 0.905){
+            int locId = LocationManager.SpeciesAndSizeToSizeLocID.get(species + "0.90");
+            if(!locationManager.locAlreadyChecked(locId)){
+                APAgent.log("Trying to send 'Size 0.90' check for " + species);
+                if (sendCheck(locId)){
+                    sendNotification("Size check sent!", "Size 0.90 check for " + species + " sent.");
+                }
+            }
+        }
+    }
+
+
     // ---------------------------------------------------
     // Methods called by the mod/client to impact the game
     // ---------------------------------------------------
+
+
 
     /// Unlocks a species in-game
     /// @param id the id of the species to unlock
     public static void unlockShopItem(int id){
         GameManager.getShops().unlockItem(id);
     }
+
 
     /// Sends the player an in-game notification
     /// @param title the notification title text
@@ -621,6 +688,9 @@ public class APBridge {
         EquilinoxGuis.notify(title, msg, GuiRepository.INFO, null);
     }
 
+
+    /// Increases the player's dp amount
+    /// @param amt the amount of dp to give
     public static void giveMoney(int amt){
         GameManager.getSession().getStats().increaseDp(amt);
     }

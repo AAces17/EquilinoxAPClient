@@ -36,10 +36,10 @@ public class APAgent {
                     true
             );
 
-            log.println("Agent loaded! Mod version " + APBridge.getModVersion());
-            log.println("Java version: "
+            log.println("[AP] Agent loaded! Mod version " + APBridge.getModVersion());
+            log.println("[AP] Java version: "
                     + System.getProperty("java.version"));
-            log.println("Java home: "
+            log.println("[AP] Java home: "
                     + System.getProperty("java.home"));
 
         } catch (IOException e) {
@@ -51,7 +51,7 @@ public class APAgent {
             instrumentation.addTransformer(transformer);
         }
 
-        log.println("Transformers registered.");
+        log.println("[AP] Transformers registered -- EqAP Version " + APBridge.getModVersion());
     }
 
     public static void log(String message) {

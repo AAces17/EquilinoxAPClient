@@ -51,6 +51,7 @@ public class ArchipelagoGui extends SecondPanelUi {
         this.addNameOption(0.15F, yPos);
         this.waterMenu = this.addOption(0.4F, yPos, GameText.getText(698), WaterHeights.values(), 1);
         this.terrainMenu = this.addOption(0.65F, yPos, GameText.getText(702), TerrainType.values(), 1);
+        this.generated = false;
     }
 
     private void createBackOption() {

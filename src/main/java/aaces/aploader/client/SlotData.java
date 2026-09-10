@@ -1,12 +1,12 @@
 package aaces.aploader.client;
 
-import com.google.gson.annotations.SerializedName;
-
 public class SlotData {
 
-    public int money_sanity;
+    public int tasks_reward_dp;
+    public int starting_dp;
+    public int itempool_dp;
 
-    public boolean getMoney_sanity(){
-        return money_sanity == 1;
+    public boolean tasksRewardDP(){
+        return tasks_reward_dp == 1;
     }
 }

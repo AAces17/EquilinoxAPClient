@@ -7,7 +7,7 @@ import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 
 public class ItemManager {
-    private int index = 0;
+    private int index;
 
 //region Item ID Maps
 
@@ -219,20 +219,27 @@ public class ItemManager {
         }
         //Handle the received item:
 
+        // I'm using the first digit of the item id to classify items. Not sure if this is the most elegant
+        // way to do it, but it works. I can use the second digit to further differentiate them, if needed
         int firstDigit = Character.getNumericValue(Long.toString(itemId).charAt(0));
 
         switch(firstDigit){
-            case 1: // Species Unlock - note, I think this needs to happen whenever the save is loaded for all unlocked species
+            case 1: // Species Unlocks
+
+                // I don't think the game saves which shop items are unlocked properly, so we allow these items
+                // to go through on connection even if they have been received before (no harm in doing so)
                 String species = ItemIDtoSpeciesName.get((int) itemId);
                 int shopIdOfSpecies = SpeciesNameToShopItemID.get(species);
                 APBridge.unlockShopItem(shopIdOfSpecies);
+
+                // Only send the in game notification if this is actually a new item, though
                 if(index > this.index) APBridge.sendNotification(
                         species + " Unlocked!",
                         "Received " + species + " Permit from " + sendingPlayer);
                 break;
-            case 8: // Money
-                if (index <= this.index) return false; // Don't give money again
-                int amount = (int) (itemId - 80000) * 100;
+            case 8: // Money (dp) items
+                if (index <= this.index) return false; // Don't give money again on startup
+                int amount = (int) (itemId - 80000) * 100; // eg, id 80750 <=> 75,000 dp
                 APBridge.giveMoney(amount);
                 APBridge.sendNotification("Received " + amount + " dp!", "Received " + amount + " dp from " + sendingPlayer);
                 break;
