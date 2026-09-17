@@ -129,6 +129,37 @@ public class GameManagerTransformer implements ClassFileTransformer {
                     };
                 }
 
+                if ("cleanUp".equals(name)
+                        && "()V".equals(descriptor)){
+
+                    APAgent.log(
+                            "[AP] Found GameManager.cleanUp()"
+                    );
+
+                    return new MethodVisitor(
+                            Opcodes.ASM9,
+                            mv
+                    ) {
+
+                        @Override
+                        public void visitInsn(int opcode) {
+
+                            // Insert immediately before RETURN
+                            if (opcode == Opcodes.RETURN) {
+                                mv.visitMethodInsn(
+                                        Opcodes.INVOKESTATIC,
+                                        "aaces/aploader/APBridge",
+                                        "onApplicationQuit",
+                                        "()V",
+                                        false
+                                );
+                            }
+
+                            super.visitInsn(opcode);
+                        }
+                    };
+                }
+
                 return mv;
             }
         };

@@ -1,5 +1,6 @@
 package aaces.aploader.client;
 
+import aaces.aploader.APBridge;
 import com.google.common.collect.ImmutableMap;
 
 import java.util.*;
@@ -515,6 +516,22 @@ public class LocationManager {
         this.checkedLocs.clear();
         for (long loc : checkedLocs){
             this.checkedLocs.add((int) loc);
+        }
+    }
+
+    public void unlockAlreadyEvolvedSpecies(){
+        for (int locId : checkedLocs){
+            if (SpeciesEvolutionToLocID.containsValue(locId)){
+                String species = "";
+                for (String s : SpeciesEvolutionToLocID.keySet()){
+                    if (SpeciesEvolutionToLocID.get(s) == locId){
+                        species = s;
+                        break;
+                    }
+                }
+                int shopIdOfSpecies = ItemManager.SpeciesNameToShopItemID.get(species);
+                APBridge.unlockShopItem(shopIdOfSpecies);
+            }
         }
     }
 

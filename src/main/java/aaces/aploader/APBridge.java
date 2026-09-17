@@ -8,15 +8,22 @@ import basics.DisplayManager;
 import blueprints.Blueprint;
 import breedingTraits.FloatTrait;
 import breedingTraits.Trait;
-import breedingTraits.VectorTrait;
+import breedingTraits.TraitBlueprint;
+import classification.Classifier;
 import componentArchitecture.Component;
+import componentArchitecture.ComponentBlueprint;
 import componentArchitecture.ComponentType;
+import components.InformationComponent;
 import events.EventData;
 import events.EventManager;
 import extraInfoGui.ExtraInfoContent;
 import extraInfoGui.ExtraInfoGui;
 import extraInfoGui.ExtraToolbarGui;
 import fontRendering.Text;
+import food.FoodComponent;
+import food.FoodSection;
+import food.FoodSectionType;
+import food.FoodToShare;
 import gameManaging.GameManager;
 import gameManaging.GameState;
 import gameMenu.DnaButtonGui;
@@ -32,17 +39,17 @@ import io.github.archipelagomw.APResult;
 import languages.GameText;
 import mainGuis.*;
 import org.lwjgl.util.vector.Vector2f;
+import org.lwjgl.util.vector.Vector3f;
+import resourceManagement.BlueprintRepository;
 import saves.SaveSlot;
 import saves.Saves;
 import session.GameMode;
 import session.Session;
 import session.SessionManager;
 import shopping.BlueprintShopItem;
+import shops.ShopItem;
 import taskUi.TaskInfoFrameUi;
-import tasks.CashReward;
-import tasks.Reward;
-import tasks.Task;
-import tasks.TaskState;
+import tasks.*;
 import unlockGuide.EvolveChainUi;
 import userInterfaces.ClickListener;
 import userInterfaces.GuiImage;
@@ -61,7 +68,7 @@ import java.util.*;
 public class APBridge {
 
     private static final String gameVersion = "1.7.2";
-    private static final String modVersion = "0.0.1";
+    private static final String modVersion = "0.0.1d";
 
     public static String host = "";
     public static String slot = "";
@@ -185,8 +192,9 @@ public class APBridge {
     }
 
 
-    /// Called when the game quits. Used for cleanup.
+    /// Called when GameManager.cleanup() runs. Used for cleanup.
     public static void onApplicationQuit(){
+        APAgent.log("Cleaning up");
         APClient.tryDisconnect();
     }
 
@@ -394,6 +402,8 @@ public class APBridge {
             if(itemManager != null) {
                 // Save the current item index to avoid receiving duplicates on reconnect
                 writer.writeInt(itemManager.getIndex());
+            } else {
+                writer.writeInt(0);
             }
 
             if(locationManager != null) {
@@ -402,6 +412,8 @@ public class APBridge {
                 while (locationManager.nonemptyQueue()) {
                     writer.writeInt(locationManager.popOldestLocation());
                 }
+            } else {
+                writer.writeInt(0);
             }
         } catch (IOException e) {
             APAgent.log("Couldn't save AP info!");
@@ -431,7 +443,7 @@ public class APBridge {
             }
 
             APAgent.log("Trying to connect: host: "+host+", slot: "+slot+", password: "+password + ", item index: "+itemManager.getIndex());
-            client = APClient.tryConnect(host, slot, password, itemManager, locationManager);
+            client = APClient.tryConnect(host, slot, password, itemManager, locationManager, true);
         } catch (Exception e) {
             APAgent.log("couldn't load the saved state (this can happen if trying to load a world created without this mod installed)");
             APAgent.log("\t"+e.getMessage());
@@ -471,10 +483,44 @@ public class APBridge {
             updateAutoSave.setAccessible(true);
             updateAutoSave.invoke(session);
         } catch (Exception e){
-            APAgent.log("couldn't load the saved state (this can happen if trying to load a world created without this mod installed)");
+            APAgent.log("Couldn't load the saved state (this can happen if trying to load a world created without this mod installed)");
             APAgent.log("\t"+e.getMessage());
             e.printStackTrace();
         }
+    }
+
+
+    /// Called by the Evolution UI to test if we have enough dp to evolve. If "Free Evolution" is on,
+    /// we make the UI think we have enough dp.
+    public static int getDpCountForEvolution(){
+        //APAgent.log("Testing DP Count to determine evolution eligibility");
+        boolean freeEvolution = APClient.Connected() ? client.slotData.freeEvolution() : true;
+        if(freeEvolution){
+            return 999999999;
+        } else {
+            return GameManager.getSession().getStats().getDpCount();
+        }
+    }
+
+
+    /// Called to determine how much dp to deduct on evolution, and what to display as the cost of evolution
+    /// @param info The information component containing the original price
+    /// @return `0` if "Free Evolution" is enabled, `info.getPrice()` otherwise
+    public static int getEvolutionPrice(InformationComponent.InformationCompBlueprint info){
+        //APAgent.log("Checking the cost of evolution");
+        boolean freeEvolution = APClient.Connected() ? client.slotData.freeEvolution() : true;
+        if(freeEvolution){
+            return 0;
+        } else {
+            return info.getPrice();
+        }
+    }
+
+
+    /// Equilinox has lots of nested and abstract classes, so this can be used to try and find them
+    public static void debug(){
+        APAgent.log("debug() call placed inside method " + Thread.currentThread().getStackTrace()[2]);
+        APAgent.log("which in turn was called by " + Thread.currentThread().getStackTrace()[3]);
     }
 
 
@@ -493,18 +539,242 @@ public class APBridge {
         // tasks can be completed out of order, we need to just unlock all of them right
         // at the start.
         for(Task task : GameManager.getTaskManager().getTasks()){
+            if (task.getState() == TaskState.COMPLETE) continue;
             task.unlock();
         }
-        //testing:
-        //GameManager.getShops().unlockAll();
+
+        //GameManager.getShops().unlockAll(); // Just for testing
 
         EventManager.EVOLUTION.addListener(APBridge::onEvolution);
         EventManager.POPULATION_ADD.addListener(APBridge::onPopulationAdd);
+
+        //componentAnalysis(); // Debug
 
         inGameInitialized = true;
         APAgent.log("In-game initialized");
     }
 
+    /// This was used to create a script to view the contents of an Equilinox save file, it is not used by the mod.
+    private static void componentAnalysis(){
+        try {
+            Field tasksField = TaskManager.class.getDeclaredField("tasks");
+            tasksField.setAccessible(true);
+            Map<Integer, Task> tasks = (Map<Integer, Task>) tasksField.get(GameManager.getTaskManager());
+            for (int i : tasks.keySet()){
+                Task task = tasks.get(i);
+                StringBuilder req_string = new StringBuilder();
+                for (TaskRequirement requirement : task.getRequirements(false)){
+                    switch(requirement.getClass().toString()) {
+                        case "class tasks.HappyEntitiesReq":
+                            req_string.append("i");
+                            break;
+                        case "class tasks.ColourEntityReq":
+                        case "class tasks.EntityCountReq":
+                            req_string.append("i");
+                            break;
+                        case "class tasks.EvolutionReq":
+                            req_string.append("i");
+                            break;
+                        case "class tasks.EatReq":
+                            req_string.append("i");
+                            break;
+                        case "class tasks.BreedReq":
+                            req_string.append("i");
+                            break;
+                        case "class tasks.TaskCompletorRequirement":
+                            req_string.append("i");
+                            break;
+                        case "class tasks.BuildReq":
+                            req_string.append("i");
+                            break;
+                        case "class tasks.BaaReq":
+                            req_string.append("i");
+                            break;
+                        case "class tasks.ButterflyCatchReq":
+                            req_string.append("i");
+                            break;
+                        case "class tasks.HoneyReq":
+                            req_string.append("i");
+                            break;
+                        case "class tasks.TreeCutReq":
+                            req_string.append("i");
+                            break;
+                        case "class tasks.HoneyHarvesterReq":
+                            req_string.append("i");
+                            break;
+                        case "class tasks.HuntingReq":
+                            req_string.append("i");
+                            break;
+                        case "class tasks.SpittingRequirement":
+                            req_string.append("i");
+                            break;
+                        case "class tasks.BloomingReq":
+                            req_string.append("i");
+                            break;
+                        case "class tasks.FlyCatchReq":
+                            req_string.append("i");
+                            break;
+                        case "class tasks.EagleCatchReq":
+                            req_string.append("i");
+                            break;
+                        case "class tasks.HoleDigReq":
+                            req_string.append("i");
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                System.out.println(i + ": \"" + req_string + "\",");
+            }
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+        try {
+            for (Blueprint blueprint : BlueprintRepository.getAllBlueprints()) {
+                int id = blueprint.getId();
+                System.out.println(id + ": \"" + blueprint.getName() + "\",");
+                if(true) continue;
+                //if (id != 20) continue;
+                Set<ComponentType> componentTypes = blueprint.getComponentTypes();
+                Set<ComponentBlueprint> componentBlueprints = new HashSet<>();
+                for (ComponentType type : componentTypes) {
+                    componentBlueprints.add(blueprint.getComponent(type));
+                }
+                int numComponents = componentBlueprints.size();
+
+                Field componentsField = Blueprint.class.getDeclaredField("components");
+                componentsField.setAccessible(true);
+                Map<ComponentType, ComponentBlueprint> components = (Map<ComponentType, ComponentBlueprint>) componentsField.get(blueprint);
+
+                //System.out.println("Blueprint id: " + id);
+                //System.out.println("\tNum Components: " + numComponents);
+                StringBuilder loadString = new StringBuilder();
+
+                for (ComponentBlueprint compBlueprint : components.values()) {
+
+                    Component component = compBlueprint.createInstance();
+
+                    // comp trait load
+                    List<TraitBlueprint> traitBlueprints = compBlueprint.getTraits();
+                    //System.out.println("\t\tComponent: " + compBlueprint.getComponentType().toString());
+                    if (traitBlueprints != null) {
+                        for (TraitBlueprint traitBlueprint : traitBlueprints) {
+                            //System.out.println("\t\t\t"+traitBlueprint.getName());
+                            switch (traitBlueprint.getName()) {
+                                case "Disease Resist":
+                                case "Sting Power":
+                                case "Speed":
+                                case "Bounce Power":
+                                case "Edibility":
+                                case "Productivity":
+                                case "Yield":
+                                case "Attack Power":
+                                case "Honey Production":
+                                case "Anger":
+                                case "Size":
+                                    loadString.append("ffi");
+                                    break;
+                                case "Colour":
+                                    loadString.append("c");
+                                    break;
+                            }
+                        }
+                    }
+                    // then component load
+                    boolean isAnimal = blueprint.getSpeciesClassification().isTypeOf(Classifier.getAnimalClassification());
+                    switch (component.getClass().toString()) {
+                        case "class growth.DynamicGrowthComponent":
+                            loadString.append("b!{iff}");
+                            break;
+                        case "class toolbox.Transformation":
+                            loadString.append("vfff");
+                            break;
+                        case "class sleeping.SleepComponent":
+                            loadString.append("b");
+                            break;
+                        case "class health.LifeComponent":
+                            loadString.append("ffffsf");
+                            if (isAnimal) {
+                                loadString.append("bf");
+                            }
+                            loadString.append("bfib?{i}");
+                            break;
+                        case "class components.NameComponent":
+                            loadString.append("Sb");
+                            break;
+                        case "class eating.EatingComponent":
+                            loadString.append("fi:{S}");
+                            break;
+                        case "class components.InformationComponent":
+                            loadString.append("vi");
+                            break;
+                        case "class components.MeshComponent":
+                            loadString.append("i");
+                            break;
+                        case "class growth.StaticGrowthComponent":
+                            loadString.append("b!{iff}");
+                            break;
+                        case "class fruit.FruiterComponent":
+                            loadString.append("i");
+                            break;
+                        case "class food.FoodComponent":
+                            FoodComponent foodComponent = (FoodComponent) component;
+                            try {
+                                Field sectionsField = FoodComponent.class.getDeclaredField("sections");
+                                sectionsField.setAccessible(true);
+                                Map<FoodSectionType, FoodSection> sections = (Map<FoodSectionType, FoodSection>) sectionsField.get(foodComponent);
+                                for (FoodSection section : sections.values()) {
+                                    if (section instanceof FoodToShare) {
+                                        loadString.append("i");
+                                    }
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                            break;
+                        case "class perching.PerchComponent":
+                            loadString.append("b?{i:{ii}}");
+                            break;
+                        case "class shellHide.ShellHideComponent":
+                            loadString.append("b");
+                            break;
+                        case "class fruit.DecayComponent":
+                            loadString.append("f");
+                            break;
+                        case "class fighting.HostileComponent":
+                            loadString.append("f");
+                            break;
+                        case "class hiveComponents.HiveComponent":
+                            loadString.append("i");
+                            break;
+                        case "class building.BuildComponent":
+                            loadString.append("i");
+                            break;
+                        case "class beavers.BeaverComponent":
+                            loadString.append("b");
+                            break;
+                        case "class building.DecomposeComponent":
+                            loadString.append("b");
+                            break;
+                        case "class equipping.ItemComponent":
+                            loadString.append("f");
+                            break;
+                        case "class nightBloom.BloomComponent":
+                            loadString.append("if");
+                            break;
+                        default:
+                            break;
+                    }
+
+                }
+                String lString = loadString.toString();
+
+                System.out.println(id + ": \"" + lString + "\",");
+            }
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
 
     /// Gets the current version of the AP mod
     /// @return the mod version
@@ -526,7 +796,7 @@ public class APBridge {
         APAgent.log("Trying to generate a world: host: "+host+", slot: "+slot+", password: "+password);
         itemManager = new ItemManager(0);
         locationManager = new LocationManager();
-        client = APClient.tryConnect(host, slot, password, itemManager, locationManager);
+        client = APClient.tryConnect(host, slot, password, itemManager, locationManager, true);
         return true;
     }
 
@@ -622,32 +892,37 @@ public class APBridge {
         trySendEvolutionCheck(speciesName);
     }
 
+
     /// Listens for the Population Add event to send the relevant check
-    /// @param data always null, but needed for the event
+    /// @param data always null
     private static void onPopulationAdd(EventData data){
         Map<Integer, Entity> entitiesMap = GameManager.getWorld().getEntityGrid().getWorldEntities();
         Entity newEntity = entitiesMap.get(Collections.max(entitiesMap.keySet()));
-        APAgent.log("Population add event: ");
-        APAgent.log("Species: " + newEntity.getBlueprint().getName());
-        APAgent.log("New species?: " + newEntity.isNewSpecies());
-        APAgent.log("Id: "+newEntity.getId());
+        //APAgent.log("Population add event: ");
+        //APAgent.log("Species: " + newEntity.getBlueprint().getName());
+        //APAgent.log("New species?: " + newEntity.isNewSpecies());
+        //APAgent.log("Id: "+newEntity.getId());
         for(Trait trait : newEntity.getTraits()){
             float value = -100f;
             if (trait instanceof FloatTrait) {
                 value = ((FloatTrait) trait).value;
             }
-            APAgent.log("Trait: " + trait.blueprint.getName() + ": " + value);
+            //APAgent.log("Trait: " + trait.blueprint.getName() + ": " + value);
             if(trait.blueprint.getName().equals("Size")){
                 processNewSpeciesSize(newEntity.getBlueprint().getName(), value * 10);
             }
         }
     }
 
-    /// Called whenever a new entity spawns to check its size.
+
+    /// Called whenever a new entity spawns to check its size
     /// @param species The species of the entity that spawned
     /// @param size The size of the entity that spawned
     private static void processNewSpeciesSize(String species, float size){
         if(!saveLoaded) return;
+        if(!APClient.Connected()) return;
+        if(!client.slotData.includeSizeChecks()) return;
+
         if (size >= 1.095){
             int locId = LocationManager.SpeciesAndSizeToSizeLocID.get(species + "1.10");
             if(!locationManager.locAlreadyChecked(locId)){
@@ -656,7 +931,7 @@ public class APBridge {
                     sendNotification("Size check sent!", "Size 1.10 check for " + species + " sent.");
                 }
             }
-        } else if (size <= 0.905){
+        } else if (size < 0.905){
             int locId = LocationManager.SpeciesAndSizeToSizeLocID.get(species + "0.90");
             if(!locationManager.locAlreadyChecked(locId)){
                 APAgent.log("Trying to send 'Size 0.90' check for " + species);
@@ -668,11 +943,58 @@ public class APBridge {
     }
 
 
+    /// Called on a successful connection to an Archipelago server to properly resync
+    public static void onConnect(){
+        for(Task task : GameManager.getTaskManager().getTasks()){
+            if (task.getState() == TaskState.COMPLETE) continue;
+            task.unlock();
+        }
+        lockShops();
+        setCheckedLocs(client.getLocationManager().getCheckedLocations());
+        tryFlushLocationQueue(false);
+        locationManager.unlockAlreadyEvolvedSpecies();
+    }
+
+    /// Called by BinaryReaderTransformer to debug save file loading
+    public static void printRead(int i){
+        APAgent.log("Read an int. Value: " + i);
+    }
+    public static void printRead(float i){
+        APAgent.log("Read a float. Value: " + i);
+    }
+    public static void printRead(String i){
+        APAgent.log("Read a string. Value: " + i);
+    }
+    public static void printRead(boolean i){
+        APAgent.log("Read a bool. Value: " + i);
+    }
+    public static void printRead(long i){
+        APAgent.log("Read a long. Value: " + i);
+    }
+    public static void printRead(short i){
+        APAgent.log("Read a short. Value: " + i);
+    }
+    public static void printRead(Vector3f i){
+        APAgent.log("Read a vector. Value: " + i);
+    }
+
+
+
     // ---------------------------------------------------
     // Methods called by the mod/client to impact the game
     // ---------------------------------------------------
 
 
+    /// Locks every shop item. Called on load/connect before manually unlocking the correct
+    /// shop items. Used to avoid issues with incorrectly locked/unlocked species.
+    public static void lockShops(){
+        for (ShopItem item : GameManager.getShops().getPlantShop().getShopStock()){
+            item.setLocked(true);
+        }
+        for (ShopItem item : GameManager.getShops().getAnimalShop().getShopStock()){
+            item.setLocked(true);
+        }
+    }
 
     /// Unlocks a species in-game
     /// @param id the id of the species to unlock

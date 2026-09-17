@@ -16,14 +16,17 @@ public class APAgent {
             new GameManagerTransformer(),
             new MenuPanelGUITransformer(),
             new GameMenuGuiTransformer(),
-            new GameMenuBackgroundTransformer(),
             new ClaimButtonGuiTransformer(),
             new TaskInfoFrameUiTransformer(),
             new MyKeyboardTransformer(),
             new UnlockGuideUiTransformer(),
             new SessionTransformer(),
             new SessionManagerTransformer(),
-            new SavesTransformer()
+            new SavesTransformer(),
+            //new BinaryReaderTransformer(), // Used for debugging save file loading
+            new EvolveProgressUiTransformer(),
+            new EvolveProgressUi2Transformer(),
+            new ChildStateSubClassTransformer()
     };
 
     public static void premain(
@@ -51,7 +54,7 @@ public class APAgent {
             instrumentation.addTransformer(transformer);
         }
 
-        log.println("[AP] Transformers registered -- EqAP Version " + APBridge.getModVersion());
+        log("[AP] Transformers registered -- EqAP Version " + APBridge.getModVersion());
     }
 
     public static void log(String message) {

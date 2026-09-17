@@ -39,6 +39,7 @@ public class ArchipelagoGui extends SecondPanelUi {
 
     protected void init(){
         super.init();
+        this.generated = false;
         this.createBackOption();
         this.addConnectButton();
         float yPos = 0.1F;
@@ -51,7 +52,7 @@ public class ArchipelagoGui extends SecondPanelUi {
         this.addNameOption(0.15F, yPos);
         this.waterMenu = this.addOption(0.4F, yPos, GameText.getText(698), WaterHeights.values(), 1);
         this.terrainMenu = this.addOption(0.65F, yPos, GameText.getText(702), TerrainType.values(), 1);
-        this.generated = false;
+
     }
 
     private void createBackOption() {
@@ -86,7 +87,7 @@ public class ArchipelagoGui extends SecondPanelUi {
         generateButton.addListener(new ClickListener() {
             public void eventOccurred(GuiClickEvent event) {
                 if (event.isLeftClick()) {
-                    if (APClient.Connected() || ArchipelagoGui.this.generated) {
+                    if (ArchipelagoGui.this.generated) {
                         return;
                     }
 
@@ -117,7 +118,7 @@ public class ArchipelagoGui extends SecondPanelUi {
                                 name = "AP Save";
                             }
 
-                            GameManager.sessionManager.startNewWorld(WorldConfigs.create(smoothnessValue, waterHeight), name, GameMode.NORMAL);
+                            GameManager.sessionManager.startNewWorld(WorldConfigs.create(smoothnessValue, waterHeight), name.replace("-", ""), GameMode.NORMAL);
                             APBridge.saveLoaded = true;
                         }
                     } catch (Exception e) {

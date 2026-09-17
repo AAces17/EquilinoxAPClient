@@ -36,9 +36,9 @@ public class APClient extends Client {
     /// @param itemManager the ItemManager instance used by APBridge
     /// @param locationManager the LocationManager instance used by APBridge
     /// @return the APClient instance
-    public static APClient tryConnect(String host, String slot, String password, ItemManager itemManager, LocationManager locationManager){
+    public static APClient tryConnect(String host, String slot, String password, ItemManager itemManager, LocationManager locationManager, boolean forceReconnect){
         if (Connected()) {
-            if (slot.equals(client.getMyName()) && host.equals(lastHostAttempt)){
+            if (slot.equals(client.getMyName()) && host.equals(lastHostAttempt) && !forceReconnect){
                 return client;
             } else {
                 APAgent.log("Already connected, but got a connect call with different information. Closing the existing connection.");
@@ -57,13 +57,10 @@ public class APClient extends Client {
         return client;
     }
 
-    public SlotData getSlotData() {
-        return slotData;
-    }
-
     @Override
     public void onError(Exception ex) {
         String error = String.format("Connection error: %s", ex.getLocalizedMessage());
+        APBridge.sendNotification("Connection Error", "Archipelago Connection Error: " + ex.getLocalizedMessage());
         APAgent.log(error);
     }
 
@@ -77,9 +74,10 @@ public class APClient extends Client {
     }
 
     public static void tryDisconnect(){
-        if (!Connected()) return;
-        APAgent.log("trying to disconnect");
+        if(client == null) return;
+        APAgent.log("Trying to disconnect");
         client.close();
+        APAgent.log("Disconnected");
     }
 
     public static boolean Connected(){

@@ -19,9 +19,7 @@ public class ConnectResult {
             APAgent.log("Successfully connected to " + client.getConnectedAddress());
             client.slotData = event.getSlotData(SlotData.class);
 
-            APBridge.setCheckedLocs(client.getLocationManager().getCheckedLocations());
-
-            APBridge.tryFlushLocationQueue(false);
+            APBridge.onConnect();
 
             APBridge.sendNotification("[AP] Connected!", "Successfully connected to the Archipelago server.");
         } else if (event.getResult() == ConnectionResult.InvalidPassword) {

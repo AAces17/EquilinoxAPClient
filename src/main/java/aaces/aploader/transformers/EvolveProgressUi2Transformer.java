@@ -6,20 +6,14 @@ import org.objectweb.asm.*;
 import java.lang.instrument.ClassFileTransformer;
 import java.security.ProtectionDomain;
 
-public class GameMenuBackgroundTransformer implements ClassFileTransformer {
+public class EvolveProgressUi2Transformer implements ClassFileTransformer {
     @Override
-    public byte[] transform(
-            ClassLoader loader,
-            String className,
-            Class<?> classBeingRedefined,
-            ProtectionDomain protectionDomain,
-            byte[] classfileBuffer) {
-
-        if (!"gameMenu/GameMenuBackground".equals(className)) {
+    public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) {
+        if (!"evolutionUi/EvolveProgressUi$2".equals(className)) {
             return null;
         }
 
-        APAgent.log("[AP] Transforming GameMenuBackground");
+        APAgent.log("Transforming EvolveProgressUi$2");
 
         ClassReader reader = new ClassReader(classfileBuffer);
 
@@ -49,12 +43,10 @@ public class GameMenuBackgroundTransformer implements ClassFileTransformer {
                         exceptions
                 );
 
-                if ("quit".equals(name)
-                        && "()V".equals(descriptor)) {
 
-                    APAgent.log(
-                            "[AP] Found GameMenuBackground.quit()"
-                    );
+                if ("eventOccurred".equals(name) && "(LuserInterfaces/GuiClickEvent;)V".equals(descriptor)) {
+
+                    APAgent.log("Found EvolveProgressUi$2 eventOccurred");
 
                     return new MethodVisitor(
                             Opcodes.ASM9,
@@ -62,20 +54,24 @@ public class GameMenuBackgroundTransformer implements ClassFileTransformer {
                     ) {
 
                         @Override
-                        public void visitInsn(int opcode) {
+                        public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean isIntf) {
 
-                            // Insert immediately before RETURN
-                            if (opcode == Opcodes.RETURN) {
-                                mv.visitMethodInsn(
+                            if ("getPrice".equals(name) && "()I".equals(desc)) {
+
+                                APAgent.log("Replacing getPrice call with APBridge.getEvolutionPrice(Lcomponents/InformationComponent$InformationCompBlueprint;)I");
+
+                                // call the other method
+                                super.visitMethodInsn(
                                         Opcodes.INVOKESTATIC,
                                         "aaces/aploader/APBridge",
-                                        "onApplicationQuit",
-                                        "()V",
+                                        "getEvolutionPrice",
+                                        "(Lcomponents/InformationComponent$InformationCompBlueprint;)I",
                                         false
                                 );
+                            } else {
+                                // Keep all other method calls untouched
+                                super.visitMethodInsn(opcode, owner, name, desc, isIntf);
                             }
-
-                            super.visitInsn(opcode);
                         }
                     };
                 }
