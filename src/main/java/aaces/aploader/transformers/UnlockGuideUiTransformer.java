@@ -19,7 +19,7 @@ public class UnlockGuideUiTransformer implements ClassFileTransformer {
             return null;
         }
 
-        APAgent.log("[AP] Transforming UnlockGuideUi");
+        APAgent.log("Transforming UnlockGuideUi");
 
         ClassReader reader = new ClassReader(classfileBuffer);
 
@@ -53,7 +53,7 @@ public class UnlockGuideUiTransformer implements ClassFileTransformer {
                         && "(Lshopping/BlueprintShopItem;)V".equals(descriptor)) {
 
                     APAgent.log(
-                            "[AP] Found UnlockGuideUi.openUnlockGuidePanel()"
+                            "Found UnlockGuideUi.openUnlockGuidePanel()"
                     );
 
                     return new MethodVisitor(
