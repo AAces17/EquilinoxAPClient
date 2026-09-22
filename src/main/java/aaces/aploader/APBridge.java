@@ -32,6 +32,7 @@ import gameMenu.GameMenuGui;
 import gameMenu.MenuPanelGui;
 import guiRendering.GuiRenderData;
 import guis.GuiComponent;
+import guis.GuiMaster;
 import guis.GuiTexture;
 import health.LifeCompBlueprint;
 import instances.Entity;
@@ -50,17 +51,25 @@ import shopping.BlueprintShopItem;
 import shops.ShopItem;
 import taskUi.TaskInfoFrameUi;
 import tasks.*;
+import textures.Texture;
+import textures.TextureBuilder;
+import textures.TextureLoadRequest;
+import toolTips.ToolTipInfo;
+import toolbar.SlideInPanel;
+import toolbar.SlideInPanelSync;
+import toolbar.Toolbar;
 import unlockGuide.EvolveChainUi;
-import userInterfaces.ClickListener;
-import userInterfaces.GuiImage;
-import userInterfaces.TitlePanelUi;
+import userInterfaces.*;
 import utils.BinaryReader;
 import utils.BinaryWriter;
+import utils.MyFile;
 import world.WorldConfigs;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 
@@ -68,7 +77,7 @@ import java.util.*;
 public class APBridge {
 
     private static final String gameVersion = "1.7.2";
-    private static final String modVersion = "0.0.1d";
+    private static final String modVersion = "0.0.1e";
 
     public static String host = "";
     public static String slot = "";
@@ -80,6 +89,9 @@ public class APBridge {
 
     private static boolean inGameInitialized = false;
     public static boolean saveLoaded = false;
+
+    public static Texture AP_ICON;
+    public static Texture AP_COLOR;
 
 
 
@@ -98,6 +110,8 @@ public class APBridge {
     public static void gameManagerInit(SessionManager sm) {
         APAgent.log("DEBUG: GameManager.init() called");
         //sm.loadInitialSession();
+        AP_ICON = loadGuiTexture("archipelago-white-small.png");
+        AP_COLOR = loadGuiTexture("archipelago-color-icon.png");
         try{
             Field SAVESField = SessionManager.class.getDeclaredField("SAVES");
             SAVESField.setAccessible(true);
@@ -524,6 +538,66 @@ public class APBridge {
     }
 
 
+    public static void addAPToolbarButton(Toolbar toolbar){
+        try {
+            Method addButton = Toolbar.class.getDeclaredMethod("addButton", Texture.class, float.class, ClickListener.class);
+            addButton.setAccessible(true);
+
+            TabButtonUi apButton;
+
+            ClickListener cl = event -> {
+                try {
+                    Method checkCloseSlidePanel = Toolbar.class.getDeclaredMethod("checkCloseSlidePanel");
+                    checkCloseSlidePanel.setAccessible(true);
+
+                    Field panelSyncField = Toolbar.class.getDeclaredField("panelSync");
+                    panelSyncField.setAccessible(true);
+                    SlideInPanelSync panelSync = (SlideInPanelSync) panelSyncField.get(toolbar);
+
+                    Field largePanelField = Toolbar.class.getDeclaredField("largePanel");
+                    largePanelField.setAccessible(true);
+                    SlideInPanel largePanel = (SlideInPanel) largePanelField.get(toolbar);
+
+                    if(event.isToggleOn()) {
+                        EquilinoxGuis.getExtraInfoGui().close();
+                        panelSync.display(largePanel, new ArchipelagoToolbarGui(host, slot, password, itemManager, locationManager));
+                    } else if (event.isToggleOff() && (boolean) checkCloseSlidePanel.invoke(toolbar)){
+                        EquilinoxGuis.getExtraInfoGui().close();
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            };
+
+            apButton = (TabButtonUi) addButton.invoke(toolbar, AP_ICON, 0.94616F, cl);
+            apButton.setToolTip(ToolTipInfo.newInfo("Archipelago Settings", "Manage/view the archipelago connection."));
+        } catch (Exception e) {
+            APAgent.log("Error adding AP Toolbar button");
+            APAgent.log(e.getMessage());
+        }
+
+
+    }
+
+
+    public static InputStream getFileInputStream(MyFile file) {
+        //APAgent.log("Loading texture: " + file.getName());
+        if(file.getPath().contains("archipelago")){
+            APAgent.log("Loading AP texture: " + file.getPath());
+            InputStream in = APBridge.class.getResourceAsStream(file.getPath());
+            if (in == null){
+                APAgent.log("Null texture file, defaulting");
+                MyFile def = new MyFile(GuiMaster.GUIS_LOC, "colourWheel.png");
+                return def.getInputStream();
+            }
+            return in;
+        } else {
+            //APAgent.log("    Game texture");
+            return file.getInputStream();
+        }
+    }
+
+
 
 
     // -------------------------------------------------
@@ -801,6 +875,17 @@ public class APBridge {
     }
 
 
+    public static void newConnection(String h, String s, String p, ItemManager im, LocationManager lm){
+        host = h;
+        slot = s;
+        password = p;
+        itemManager = im;
+        locationManager = lm;
+        APAgent.log("Trying to re/connect in an existing world: host: "+host+", slot: "+slot+", password: "+password);
+        client = APClient.tryConnect(host, slot, password, itemManager, locationManager, false);
+    }
+
+
     /// Called by {@link onTaskComplete} to try and send the relevant check.
     ///
     /// @param task the completed task
@@ -878,7 +963,6 @@ public class APBridge {
             }
             locationManager.markChecked(id);
         }
-        APAgent.log("Successfully flushed the location queue.");
         return true;
     }
 
@@ -951,7 +1035,9 @@ public class APBridge {
         }
         lockShops();
         setCheckedLocs(client.getLocationManager().getCheckedLocations());
-        tryFlushLocationQueue(false);
+        if (!tryFlushLocationQueue(false)){
+            APAgent.log("Failed to flush the location queue on connection");
+        }
         locationManager.unlockAlreadyEvolvedSpecies();
     }
 
@@ -977,6 +1063,12 @@ public class APBridge {
     public static void printRead(Vector3f i){
         APAgent.log("Read a vector. Value: " + i);
     }
+
+    private static Texture loadGuiTexture(String name) {
+        // TODO: Figure out how to load an image...
+        return Texture.newTexture(new MyFile("aaces/aploader/res/" + name)).noFiltering().clampEdges().create();
+    }
+
 
 
 
@@ -1007,7 +1099,7 @@ public class APBridge {
     /// @param title the notification title text
     /// @param msg the notification body text
     public static void sendNotification(String title, String msg){
-        EquilinoxGuis.notify(title, msg, GuiRepository.INFO, null);
+        EquilinoxGuis.notify(title, msg, AP_COLOR, null);
     }
 
 

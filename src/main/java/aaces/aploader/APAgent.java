@@ -26,7 +26,9 @@ public class APAgent {
             //new BinaryReaderTransformer(), // Used for debugging save file loading
             new EvolveProgressUiTransformer(),
             new EvolveProgressUi2Transformer(),
-            new ChildStateSubClassTransformer()
+            new ChildStateSubClassTransformer(),
+            new ToolbarTransformer(),
+            new TextureManagerTransformer()
     };
 
     public static void premain(

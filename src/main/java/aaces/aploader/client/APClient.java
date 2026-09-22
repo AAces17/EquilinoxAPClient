@@ -14,6 +14,8 @@ public class APClient extends Client {
 
     private static String lastHostAttempt = "";
 
+    public static boolean Connecting = false;
+
     public SlotData slotData;
 
     public APClient(String slot, String password, ItemManager itemManager, LocationManager locationManager){
@@ -50,6 +52,7 @@ public class APClient extends Client {
         lastHostAttempt = host;
         try {
             client.connect(host);
+            Connecting = true;
         } catch (URISyntaxException e) {
             APAgent.log("Couldn't connect!");
             e.printStackTrace();
@@ -62,6 +65,7 @@ public class APClient extends Client {
         String error = String.format("Connection error: %s", ex.getLocalizedMessage());
         APBridge.sendNotification("Connection Error", "Archipelago Connection Error: " + ex.getLocalizedMessage());
         APAgent.log(error);
+        Connecting = false;
     }
 
     @Override
