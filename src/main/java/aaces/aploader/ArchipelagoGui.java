@@ -70,7 +70,11 @@ public class ArchipelagoGui extends SecondPanelUi {
     private void addNameOption(float xPos, float yPos) {
         this.addName(xPos, yPos, WORLD_NAME);
         yPos += 0.08F;
-        this.nameField = this.addTextField(xPos, yPos, "[AP] " + GameManager.sessionManager.getSaves().getWaitingSlot().getName());
+        if(GameManager.sessionManager.getSaves().getWaitingSlot() == null) {
+            this.nameField = this.addTextField(xPos, yPos, "No Free Save Slots!");
+        } else {
+            this.nameField = this.addTextField(xPos, yPos, "[AP] " + GameManager.sessionManager.getSaves().getWaitingSlot().getName());
+        }
     }
 
     private void addName(float xPos, float yPos, String name) {
@@ -84,50 +88,48 @@ public class ArchipelagoGui extends SecondPanelUi {
         float yPos = GameMenuGui.BACK_BUTTON_POS.y;
         float xPos = 0.35F;
         super.addComponent(generateButton, xPos, yPos, 0.3F, 0.12F);
-        generateButton.addListener(new ClickListener() {
-            public void eventOccurred(GuiClickEvent event) {
-                if (event.isLeftClick()) {
-                    if (ArchipelagoGui.this.generated) {
-                        return;
-                    }
-
-                    try {
-                        Field textField = TextFieldGui.class.getDeclaredField("text");
-                        textField.setAccessible(true);
-
-                        Text hostText = (Text) textField.get(ArchipelagoGui.this.hostField);
-                        Text slotText = (Text) textField.get(ArchipelagoGui.this.slotField);
-                        Text passwordText = (Text) textField.get(ArchipelagoGui.this.passwordField);
-
-                        if(hostText.isEmpty() || slotText.isEmpty()) {
-                            APAgent.log("Can't connect with an empty host/slot");
-                            return;
-                        }
-                        String host = ArchipelagoGui.this.hostField.getCurrentText();
-                        String slot = ArchipelagoGui.this.slotField.getCurrentText();
-                        String password = passwordText.isEmpty() ? "" : ArchipelagoGui.this.passwordField.getCurrentText();
-
-                        if (APBridge.tryConnectAndGen(host, slot, password)){
-                            ArchipelagoGui.this.generated = true;
-                            float smoothnessValue = new float[]{0.66F, 0.85F, 1.1F}[ArchipelagoGui.this.terrainMenu.getSelectedIndex()];
-                            float waterHeight = new float[]{-4.0F, -2.0F, 0.0F}[ArchipelagoGui.this.waterMenu.getSelectedIndex()];
-                            SoundMaestro.playSystemSound(GuiSounds.SELECT);
-                            ArchipelagoGui.this.gameMenu.setNewTertiaryScreen(new LoadingScreen(() -> GameManager.sessionManager.hasWorldReady() && !GameManager.sessionManager.isLoading(), ArchipelagoGui.this.superMenu));
-                            String name = ArchipelagoGui.this.nameField.getCurrentText();
-                            if (name.isEmpty()) {
-                                name = "AP Save";
-                            }
-
-                            GameManager.sessionManager.startNewWorld(WorldConfigs.create(smoothnessValue, waterHeight), name.replace("-", ""), GameMode.NORMAL);
-                            APBridge.saveLoaded = true;
-                        }
-                    } catch (Exception e) {
-                        APAgent.log("Error parsing connection info & generating world!");
-                        APAgent.log(e.getMessage());
-                    }
+        generateButton.addListener(event -> {
+            if (event.isLeftClick()) {
+                if (ArchipelagoGui.this.generated) {
+                    return;
                 }
 
+                try {
+                    Field textField = TextFieldGui.class.getDeclaredField("text");
+                    textField.setAccessible(true);
+
+                    Text hostText = (Text) textField.get(ArchipelagoGui.this.hostField);
+                    Text slotText = (Text) textField.get(ArchipelagoGui.this.slotField);
+                    Text passwordText = (Text) textField.get(ArchipelagoGui.this.passwordField);
+
+                    if(hostText.isEmpty() || slotText.isEmpty()) {
+                        APAgent.log("Can't connect with an empty host/slot");
+                        return;
+                    }
+                    String host = ArchipelagoGui.this.hostField.getCurrentText();
+                    String slot = ArchipelagoGui.this.slotField.getCurrentText();
+                    String password = passwordText.isEmpty() ? "" : ArchipelagoGui.this.passwordField.getCurrentText();
+
+                    if (APBridge.tryConnectAndGen(host, slot, password)){
+                        ArchipelagoGui.this.generated = true;
+                        float smoothnessValue = new float[]{0.66F, 0.85F, 1.1F}[ArchipelagoGui.this.terrainMenu.getSelectedIndex()];
+                        float waterHeight = new float[]{-4.0F, -2.0F, 0.0F}[ArchipelagoGui.this.waterMenu.getSelectedIndex()];
+                        SoundMaestro.playSystemSound(GuiSounds.SELECT);
+                        ArchipelagoGui.this.gameMenu.setNewTertiaryScreen(new LoadingScreen(() -> GameManager.sessionManager.hasWorldReady() && !GameManager.sessionManager.isLoading(), ArchipelagoGui.this.superMenu));
+                        String name = ArchipelagoGui.this.nameField.getCurrentText();
+                        if (name.isEmpty()) {
+                            name = "AP Save";
+                        }
+
+                        GameManager.sessionManager.startNewWorld(WorldConfigs.create(smoothnessValue, waterHeight), name.replace("-", ""), GameMode.NORMAL);
+                        APBridge.saveLoaded = true;
+                    }
+                } catch (Exception e) {
+                    APAgent.log("Error parsing connection info & generating world!");
+                    APAgent.log(e.getMessage());
+                }
             }
+
         });
     }
 
