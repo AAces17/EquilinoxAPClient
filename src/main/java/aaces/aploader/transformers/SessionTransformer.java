@@ -156,8 +156,9 @@ public class SessionTransformer implements ClassFileTransformer {
                                                     String name,
                                                     String descriptor,
                                                     boolean isInterface) {
-                            //APAgent.log("Inspecting call: " + owner + "." + name + descriptor + " (Opcode: " + opcode + ")");
-                            // wrap the call to updateAutoSave with a checker.
+
+                            // wrap the call to updateAutoSave with a checker to prevent an autosave
+                            // before the first world is created/loaded
                             if ("updateAutoSave".equals(name)
                                     && "()V".equals(descriptor)) {
 

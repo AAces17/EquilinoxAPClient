@@ -47,16 +47,11 @@ public class ClaimButtonGuiTransformer implements ClassFileTransformer {
                         public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean isIntf) {
 
                             // Match the task.complete() method invocation
-                            // We check if the method name is "complete" and its owner is the Task class
                             if (name.equals("complete") && "()V".equals(desc) && owner.contains("Task")) {
 
                                 APAgent.log("Intercepted task.complete() -> Replacing with APBridge.onTaskComplete(task)");
 
-                                // STACK MANAGEMENT:
-                                // Right before this original INVOKEVIRTUAL instruction, the stack already contains
-                                // the 'Task' object instance (loaded by the preceding GETFIELD instruction).
-                                // Instead of calling the original complete() method which consumes the Task object,
-                                // we pass that exact Task object reference directly into our static method.
+                                // The stack should already have a Task obj, the one on which complete() was being called
 
                                 super.visitMethodInsn(
                                         Opcodes.INVOKESTATIC,

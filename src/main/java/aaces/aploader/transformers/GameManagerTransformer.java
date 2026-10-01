@@ -24,7 +24,7 @@ public class GameManagerTransformer implements ClassFileTransformer {
             return null;
         }
 
-        APAgent.log("[AP] Transforming GameManager");
+        APAgent.log("Transforming GameManager");
 
         ClassReader reader = new ClassReader(classfileBuffer);
 
@@ -58,7 +58,7 @@ public class GameManagerTransformer implements ClassFileTransformer {
                         && "()V".equals(descriptor)) {
 
                     APAgent.log(
-                            "[AP] Found GameManager.update()"
+                            "Found GameManager.update()"
                     );
 
                     return new MethodVisitor(
@@ -89,7 +89,7 @@ public class GameManagerTransformer implements ClassFileTransformer {
                         && "()V".equals(descriptor)) {
 
                     APAgent.log(
-                            "[AP] Found GameManager.init()"
+                            "Found GameManager.init()"
                     );
 
                     return new MethodVisitor(
@@ -133,7 +133,7 @@ public class GameManagerTransformer implements ClassFileTransformer {
                         && "()V".equals(descriptor)){
 
                     APAgent.log(
-                            "[AP] Found GameManager.cleanUp()"
+                            "Found GameManager.cleanUp()"
                     );
 
                     return new MethodVisitor(

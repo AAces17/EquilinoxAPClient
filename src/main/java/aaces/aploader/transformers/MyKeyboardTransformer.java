@@ -42,7 +42,6 @@ public class MyKeyboardTransformer implements ClassFileTransformer {
 
                     APAgent.log("Modifying getValidAsciiValue(char) to directly return 'c'");
 
-                    // Return a custom MethodVisitor that discards the original body
                     return new MethodVisitor(Opcodes.ASM9, mv) {
                         @Override
                         public void visitCode() {
@@ -55,7 +54,9 @@ public class MyKeyboardTransformer implements ClassFileTransformer {
                             // Return the int/char value from the top of the stack
                             super.visitInsn(Opcodes.IRETURN);
                         }
-                            //All of these overrides prevent the original method from executing
+
+                        // All of these overrides prevent the original method from executing (some of them may not
+                        // be necessary tbh)
                         @Override
                         public void visitFrame(int type, int numLocal, Object[] local, int numStack, Object[] stack) {
                         }

@@ -56,7 +56,7 @@ public class APAgent {
             instrumentation.addTransformer(transformer);
         }
 
-        log("[AP] Transformers registered -- EqAP Version " + APBridge.getModVersion());
+        log("Transformers registered -- EqAP Version " + APBridge.getModVersion());
     }
 
     public static void log(String message) {

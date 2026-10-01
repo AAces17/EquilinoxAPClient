@@ -52,8 +52,6 @@ import shops.ShopItem;
 import taskUi.TaskInfoFrameUi;
 import tasks.*;
 import textures.Texture;
-import textures.TextureBuilder;
-import textures.TextureLoadRequest;
 import toolTips.ToolTipInfo;
 import toolbar.SlideInPanel;
 import toolbar.SlideInPanelSync;
@@ -69,7 +67,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 
@@ -133,7 +130,7 @@ public class APBridge {
     }
 
 
-    /// Called every game tick. The way the mod detects entering the game probably to be changed.
+    /// Called every game tick. The way the mod detects entering the game may need to be changed.
     public static void gameManagerUpdate() {
         if(GameManager.getGameState() != GameState.GAME_MENU && GameManager.getGameState() != GameState.SPLASH_SCREEN){
             if(!inGameInitialized){
@@ -188,7 +185,7 @@ public class APBridge {
             buttonsField.set(menuPanelGui, buttons);
 
         } catch (Exception e){
-            APAgent.log("Error adding AP button!");
+            APAgent.log("Error adding AP button to the main menu!");
             APAgent.log("\t"+e.getMessage());
             e.printStackTrace();
         }
@@ -199,14 +196,13 @@ public class APBridge {
     ///
     /// @param gameMenuGui the GUI we need to modify
     public static void addVersionText(GameMenuGui gameMenuGui){
-        //APAgent.log("set version method called with \n\t" + gameMenuGui.toString());
         Text text = Text.newText("Version " + gameVersion + " -- EqAP Version " + modVersion).setFontSize(UiSettings.LARGE_FONT).create();
         text.setColour(ColourPalette.LIGHT_GREY);
         gameMenuGui.addText(text, 0.6F, 0.3F, 1.0F);
     }
 
 
-    /// Called when GameManager.cleanup() runs. Used for cleanup.
+    /// Called when GameManager.cleanup() runs.
     public static void onApplicationQuit(){
         APAgent.log("Cleaning up");
         APClient.tryDisconnect();
@@ -220,28 +216,7 @@ public class APBridge {
     /// @param task the task completed
     public static void onTaskComplete(Task task){
         APAgent.log("task completed: " + task.name);
-        //Original complete method:
-//        SoundMaestro.playSystemSound(GuiSounds.CASH);
-//        this.state = TaskState.COMPLETE;
-//
-//        for(Reward reward : task.rewards) {
-//            reward.payOut();
-//        }
-//
-//        if (this.repeatable) {
-//            if (!this.autoCollect) {
-//                EventManager.TASK_COMPLETE.registerEvent(new EventData(), new String[]{Integer.toString(this.id)});
-//            }
-//
-//            this.autoCollect = true;
-//            this.state = TaskState.IN_PROGRESS;
-//
-//            for(TaskRequirement requirement : this.requirements) {
-//                requirement.reset(GameManager.getSession());
-//            }
-//        } else {
-//            EventManager.TASK_COMPLETE.registerEvent(new EventData(), new String[]{Integer.toString(this.id)});
-//        }
+
         SoundMaestro.playSystemSound(GuiSounds.CASH);
 
         try {
@@ -408,20 +383,18 @@ public class APBridge {
     public static void saveAPState(BinaryWriter writer){
         APAgent.log("Trying to save the AP state of the game");
         try {
-            // Save the AP connection info
+
             writer.writeString(host);
             writer.writeString(slot);
             writer.writeString(password);
 
             if(itemManager != null) {
-                // Save the current item index to avoid receiving duplicates on reconnect
                 writer.writeInt(itemManager.getIndex());
             } else {
                 writer.writeInt(0);
             }
 
             if(locationManager != null) {
-                // Save any queued-but-not-yet-sent location checks
                 writer.writeInt(locationManager.numQueuedLocations());
                 while (locationManager.nonemptyQueue()) {
                     writer.writeInt(locationManager.popOldestLocation());
@@ -465,7 +438,7 @@ public class APBridge {
 
             itemManager = new ItemManager(0);
             locationManager = new LocationManager();
-            sendNotification("Couldn't Load Saved AP Info!", "Try connecting directly from the main menu, or create a new world.");
+            sendNotification("Couldn't Load Saved AP Info!", "Try connecting from the AP menu in the toolbar, or create a new world.");
         }
         saveLoaded = true;
     }
@@ -490,14 +463,13 @@ public class APBridge {
     ///
     /// @param session The session trying to autosave
     public static void safeUpdateAutoSave(Session session){
-        //APAgent.log("safe autosave wrapper called");
         if (!saveLoaded) return;
         try {
             Method updateAutoSave = Session.class.getDeclaredMethod("updateAutoSave");
             updateAutoSave.setAccessible(true);
             updateAutoSave.invoke(session);
         } catch (Exception e){
-            APAgent.log("Couldn't load the saved state (this can happen if trying to load a world created without this mod installed)");
+            APAgent.log("Couldn't autosave!");
             APAgent.log("\t"+e.getMessage());
             e.printStackTrace();
         }
@@ -507,7 +479,6 @@ public class APBridge {
     /// Called by the Evolution UI to test if we have enough dp to evolve. If "Free Evolution" is on,
     /// we make the UI think we have enough dp.
     public static int getDpCountForEvolution(){
-        //APAgent.log("Testing DP Count to determine evolution eligibility");
         boolean freeEvolution = APClient.Connected() ? client.slotData.freeEvolution() : true;
         if(freeEvolution){
             return 999999999;
@@ -521,7 +492,6 @@ public class APBridge {
     /// @param info The information component containing the original price
     /// @return `0` if "Free Evolution" is enabled, `info.getPrice()` otherwise
     public static int getEvolutionPrice(InformationComponent.InformationCompBlueprint info){
-        //APAgent.log("Checking the cost of evolution");
         boolean freeEvolution = APClient.Connected() ? client.slotData.freeEvolution() : true;
         if(freeEvolution){
             return 0;
@@ -579,7 +549,7 @@ public class APBridge {
 
     }
 
-
+    /// WIP
     public static InputStream getFileInputStream(MyFile file) {
         //APAgent.log("Loading texture: " + file.getName());
         if(file.getPath().contains("archipelago")){
@@ -851,7 +821,6 @@ public class APBridge {
     }
 
     /// Gets the current version of the AP mod
-    /// @return the mod version
     public static String getModVersion(){
         return modVersion;
     }
@@ -874,7 +843,12 @@ public class APBridge {
         return true;
     }
 
-
+    /// Called by the toolbar AP menu to connect
+    /// @param h host
+    /// @param s slot
+    /// @param p password
+    /// @param im ItemManager
+    /// @param lm LocationManager
     public static void newConnection(String h, String s, String p, ItemManager im, LocationManager lm){
         host = h;
         slot = s;
@@ -887,8 +861,6 @@ public class APBridge {
 
 
     /// Called by {@link onTaskComplete} to try and send the relevant check.
-    ///
-    /// @param task the completed task
     public static void trySendTaskCheck(Task task){
         int locId = LocationManager.TaskNameToLocID.get(task.name);
         APAgent.log("Trying to send loc check for task " + task.name + " (id " + locId + ").");
@@ -897,8 +869,6 @@ public class APBridge {
 
 
     /// Called by  to try and send the relevant check
-    ///
-    /// @param species the species evolved
     public static void trySendEvolutionCheck(String species){
         int locId = LocationManager.SpeciesEvolutionToLocID.get(species);
         APAgent.log("Trying to send loc check for evolving " + species + " (id " + locId + ").");
@@ -907,7 +877,6 @@ public class APBridge {
 
 
     /// Syncs the internal checked location list with the server's checked location list
-    /// @param checkedLocs the list of checked locations provided by the server
     public static void setCheckedLocs(Set<Long> checkedLocs){
         locationManager.setCheckedLocs(checkedLocs);
     }
@@ -982,16 +951,12 @@ public class APBridge {
     private static void onPopulationAdd(EventData data){
         Map<Integer, Entity> entitiesMap = GameManager.getWorld().getEntityGrid().getWorldEntities();
         Entity newEntity = entitiesMap.get(Collections.max(entitiesMap.keySet()));
-        //APAgent.log("Population add event: ");
-        //APAgent.log("Species: " + newEntity.getBlueprint().getName());
-        //APAgent.log("New species?: " + newEntity.isNewSpecies());
-        //APAgent.log("Id: "+newEntity.getId());
+
         for(Trait trait : newEntity.getTraits()){
             float value = -100f;
             if (trait instanceof FloatTrait) {
                 value = ((FloatTrait) trait).value;
             }
-            //APAgent.log("Trait: " + trait.blueprint.getName() + ": " + value);
             if(trait.blueprint.getName().equals("Size")){
                 processNewSpeciesSize(newEntity.getBlueprint().getName(), value * 10);
             }
@@ -1000,8 +965,6 @@ public class APBridge {
 
 
     /// Called whenever a new entity spawns to check its size
-    /// @param species The species of the entity that spawned
-    /// @param size The size of the entity that spawned
     private static void processNewSpeciesSize(String species, float size){
         if(!saveLoaded) return;
         if(!APClient.Connected()) return;
@@ -1064,6 +1027,7 @@ public class APBridge {
         APAgent.log("Read a vector. Value: " + i);
     }
 
+
     private static Texture loadGuiTexture(String name) {
         // TODO: Figure out how to load an image...
         return Texture.newTexture(new MyFile("aaces/aploader/res/" + name)).noFiltering().clampEdges().create();
@@ -1104,7 +1068,6 @@ public class APBridge {
 
 
     /// Increases the player's dp amount
-    /// @param amt the amount of dp to give
     public static void giveMoney(int amt){
         GameManager.getSession().getStats().increaseDp(amt);
     }

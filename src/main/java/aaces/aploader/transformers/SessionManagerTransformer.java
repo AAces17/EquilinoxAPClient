@@ -54,7 +54,7 @@ public class SessionManagerTransformer implements ClassFileTransformer {
                         && "()Z".equals(descriptor)) {
 
                     APAgent.log(
-                            "Found  SessionManager.saveCurrentSession()"
+                            "Found SessionManager.saveCurrentSession()"
                     );
 
                     return new MethodVisitor(
@@ -69,7 +69,7 @@ public class SessionManagerTransformer implements ClassFileTransformer {
                                                     String descriptor,
                                                     boolean isInterface) {
 
-                            // Stop the auto-save that happens the first time a world is loaded
+                            // Stop the game from saving before the first world is loaded/created
                             if ("session/Session".equals(owner) &&
                                     "save".equals(name)) {
 
