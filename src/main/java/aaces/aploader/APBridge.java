@@ -970,20 +970,21 @@ public class APBridge {
         if(!APClient.Connected()) return;
         if(!client.slotData.includeSizeChecks()) return;
 
+        if (size >= 1.195){
+            int locId = LocationManager.SpeciesAndSizeToSizeLocID.get(species + "1.20");
+            if(!locationManager.locAlreadyChecked(locId)){
+                APAgent.log("Trying to send 'Size 1.20' check for " + species);
+                if (sendCheck(locId)){
+                    sendNotification("Size check sent!", "Size 1.20 check for " + species + " sent.");
+                }
+            }
+        }
         if (size >= 1.095){
             int locId = LocationManager.SpeciesAndSizeToSizeLocID.get(species + "1.10");
             if(!locationManager.locAlreadyChecked(locId)){
                 APAgent.log("Trying to send 'Size 1.10' check for " + species);
                 if (sendCheck(locId)){
                     sendNotification("Size check sent!", "Size 1.10 check for " + species + " sent.");
-                }
-            }
-        } else if (size < 0.905){
-            int locId = LocationManager.SpeciesAndSizeToSizeLocID.get(species + "0.90");
-            if(!locationManager.locAlreadyChecked(locId)){
-                APAgent.log("Trying to send 'Size 0.90' check for " + species);
-                if (sendCheck(locId)){
-                    sendNotification("Size check sent!", "Size 0.90 check for " + species + " sent.");
                 }
             }
         }
