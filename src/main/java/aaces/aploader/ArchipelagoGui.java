@@ -121,7 +121,9 @@ public class ArchipelagoGui extends SecondPanelUi {
                             name = "AP Save";
                         }
 
-                        GameManager.sessionManager.startNewWorld(WorldConfigs.create(smoothnessValue, waterHeight), name.replace("-", ""), GameMode.NORMAL);
+                        GameManager.sessionManager.startNewWorld(WorldConfigs.create(smoothnessValue, waterHeight),
+                                name.replace("-", "").replace(".", "").replace("/", ""),
+                                GameMode.NORMAL);
                         APBridge.saveLoaded = true;
                     }
                 } catch (Exception e) {
