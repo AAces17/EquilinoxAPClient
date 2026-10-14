@@ -157,7 +157,7 @@ Range: `0` - `500000`.
 
 Can be used to add additional large DP items to the item pool. As with `starting_dp`, the actual value of the added DP items will be close to this, but not exact.
 
-### `size_checks`
+### `size_checks`:
 Default: `true`.
 
 Include checks for breeding species of size 1.10 and size 1.20. Adds 288 checks (or 286 if `evolve_camel` is the goal).
