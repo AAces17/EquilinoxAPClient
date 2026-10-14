@@ -245,6 +245,8 @@ Inside this folder should be your save files. Note that the game can not read th
 > [!WARNING]
 > Connection information is saved in your save file. It is not visible just by opening the .dat file, but if someone else loads your save file in game, it will try to connect automatically.
 
+If you don't feel comfortable sharing these files in the public server, you are welcome to DM them to me on Discord instead (username `aaces17`).
+
 
 
 
