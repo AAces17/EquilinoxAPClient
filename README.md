@@ -38,7 +38,7 @@ Archipelago client for the game *Equilinox*.
 ### Host
 Only the host needs to have the Archipelago Client installed. General archipelago installation / world generation will not be covered here, 
 instead see [the official guide](https://archipelago.gg/tutorial/Archipelago/setup_en). The host needs the `equilinox.apworld` file found in the "Releases" tab. Download this file, then double-click it to 
-automatically place it in the `custom_worlds` folder.
+automatically place it in the `custom_worlds` folder. [Click here to view the source code of the .apworld file](https://github.com/AAces17/AAcesArchipelago/tree/main/worlds/equilinox).
 
 ### Player
 
