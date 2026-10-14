@@ -1,6 +1,7 @@
 package aaces.aploader;
 
 import aaces.aploader.client.APClient;
+import aaces.aploader.client.GoalType;
 import aaces.aploader.client.ItemManager;
 import aaces.aploader.client.LocationManager;
 import audio.SoundMaestro;
@@ -37,6 +38,7 @@ import guis.GuiTexture;
 import health.LifeCompBlueprint;
 import instances.Entity;
 import io.github.archipelagomw.APResult;
+import io.github.archipelagomw.ClientStatus;
 import languages.GameText;
 import mainGuis.*;
 import org.lwjgl.util.vector.Vector2f;
@@ -74,11 +76,14 @@ import java.util.*;
 public class APBridge {
 
     private static final String gameVersion = "1.7.2";
-    private static final String modVersion = "0.0.1e";
+    private static final String modVersion = "0.1.0";
 
     public static String host = "";
     public static String slot = "";
     public static String password = "";
+
+    public static boolean goaled = false;
+    public static boolean serverKnowsWeGoaled = false;
 
     private static ItemManager itemManager = null;
     private static LocationManager locationManager = null;
@@ -254,7 +259,6 @@ public class APBridge {
     ///
     /// @param taskInfoFrameUi the ui element we add the text to
     public static void rewardsPanelIntercept(TaskInfoFrameUi taskInfoFrameUi) {
-        boolean showCashRewards = APClient.Connected() ? client.slotData.tasksRewardDP() : true;
 
         TitlePanelUi rewardPanel = new TitlePanelUi(GameText.getText(149), new GuiComponent() {
             @Override
@@ -270,16 +274,23 @@ public class APBridge {
             }
 
             protected void init() {
-                Text apRewardText = Text.newText("- Unlocks an Archipelago Item").setFontSize(UiSettings.NORM_FONT).indent().create();
-                apRewardText.setColour(ColourPalette.WHITE);
-                addText(apRewardText, 0.0F, 0.0F, 1.0F);
-
-                if (!showCashRewards) return;
-
+                boolean showCashRewards = APClient.Connected() ? client.slotData.tasksRewardDP() : true;
+                boolean completionist_goal = APClient.Connected() ? client.slotData.getGoalCondition() == GoalType.COMPLETIONIST : false;
                 try {
                     Field taskField = TaskInfoFrameUi.class.getDeclaredField("task");
                     taskField.setAccessible(true);
                     Task task = (Task) taskField.get(taskInfoFrameUi);
+
+                    Text apRewardText;
+                    if (completionist_goal && task.name.equals("Completionist")) {
+                        apRewardText = Text.newText("- Goal Condition").setFontSize(UiSettings.NORM_FONT).indent().create();
+                    } else {
+                        apRewardText = Text.newText("- Unlocks an Archipelago Item").setFontSize(UiSettings.NORM_FONT).indent().create();
+                    }
+                    apRewardText.setColour(ColourPalette.WHITE);
+                    addText(apRewardText, 0.0F, 0.0F, 1.0F);
+
+                    if (!showCashRewards) return;
 
                     float textGap = 8.0F / (super.getScale().y * (float) DisplayManager.getUiHeight());
                     float yPos = textGap + apRewardText.getHeight() / super.getScale().y;
@@ -293,6 +304,7 @@ public class APBridge {
                     }
 
                 } catch (Exception e) {
+                    APAgent.log("Error replacing task rewards text");
                     APAgent.log("\t" + e.getMessage());
                     e.printStackTrace();
                 }
@@ -383,6 +395,7 @@ public class APBridge {
     public static void saveAPState(BinaryWriter writer){
         APAgent.log("Trying to save the AP state of the game");
         try {
+            writer.writeLong(modVersionToLong());
 
             writer.writeString(host);
             writer.writeString(slot);
@@ -402,6 +415,10 @@ public class APBridge {
             } else {
                 writer.writeInt(0);
             }
+
+            writer.writeBoolean(goaled);
+            if (goaled) writer.writeBoolean(serverKnowsWeGoaled);
+
         } catch (IOException e) {
             APAgent.log("Couldn't save AP info!");
             APAgent.log("\t"+e.getMessage());
@@ -409,6 +426,32 @@ public class APBridge {
         }
     }
 
+    private static long modVersionToLong(){
+        String[] exps = modVersion.split("\\.");
+        return (long) (Math.pow(5, Integer.parseInt(exps[0])) *
+                Math.pow(3, Integer.parseInt(exps[1])) *
+                Math.pow(2, Integer.parseInt(exps[2])));
+    }
+
+    public static int[] getPrimeFactorCounts(long number, List<Long> knownPrimes) {
+        int[] counts = new int[knownPrimes.size()];
+        long remainder = number;
+
+        int index = 0;
+        for (long prime : knownPrimes) {
+            int count = 0;
+
+            while (remainder > 1 && remainder % prime == 0) {
+                count++;
+                remainder /= prime;
+            }
+
+            counts[index] = count;
+            index++;
+        }
+
+        return counts;
+    }
 
     /// Called when the game tries to load a save file.
     /// Tries to load the previously saved AP things from a save file. If the save
@@ -417,6 +460,11 @@ public class APBridge {
     public static void loadAPState(BinaryReader reader){
         APAgent.log("Trying to load saved ap info");
         try {
+            long modVersionInSave = reader.readLong();
+            int[] versionNumbers = getPrimeFactorCounts(modVersionInSave, Arrays.asList(5L, 3L, 2L));
+            String loadedModVersion = versionNumbers[0] + "." + versionNumbers[1] + "." + versionNumbers[2];
+            boolean lastSavedOnLatestVersion = modVersionInSave == modVersionToLong();
+
             host = reader.readString();
             slot = reader.readString();
             password = reader.readString();
@@ -429,6 +477,9 @@ public class APBridge {
                 locationManager.queueLocation(reader.readInt());
             }
 
+            goaled = reader.readBoolean();
+            if (goaled) serverKnowsWeGoaled = reader.readBoolean();
+
             APAgent.log("Trying to connect: host: "+host+", slot: "+slot+", password: "+password + ", item index: "+itemManager.getIndex());
             client = APClient.tryConnect(host, slot, password, itemManager, locationManager, true);
         } catch (Exception e) {
@@ -438,6 +489,8 @@ public class APBridge {
 
             itemManager = new ItemManager(0);
             locationManager = new LocationManager();
+            goaled = false;
+            serverKnowsWeGoaled = false;
             sendNotification("Couldn't Load Saved AP Info!", "Try connecting from the AP menu in the toolbar, or create a new world.");
         }
         saveLoaded = true;
@@ -942,7 +995,22 @@ public class APBridge {
         Blueprint speciesEvolved = (Blueprint) data.object;
         String speciesName = speciesEvolved.getName();
         APAgent.log("Evolution occurred! Name: " + speciesName);
-        trySendEvolutionCheck(speciesName);
+
+        if(speciesName.equals("Camel")){
+            if (client != null) {
+                if (client.slotData.getGoalCondition() == GoalType.CAMEL){
+                    if(tryGoal()){
+                        sendNotification("Goal Complete!", "You evolved a camel and therefore completed the goal!");
+                    } else {
+                        sendNotification("Goal Completed, but not sent!", "You completed your goal, but we failed to tell the server. Save and exit, then reload and reconnect to try again.");
+                    }
+                } else {
+                    trySendEvolutionCheck(speciesName);
+                }
+            }
+        } else {
+            trySendEvolutionCheck(speciesName);
+        }
     }
 
 
@@ -969,6 +1037,7 @@ public class APBridge {
         if(!saveLoaded) return;
         if(!APClient.Connected()) return;
         if(!client.slotData.includeSizeChecks()) return;
+        if(client.slotData.getGoalCondition() == GoalType.CAMEL && species.equals("Camel")) return;
 
         if (size >= 1.195){
             int locId = LocationManager.SpeciesAndSizeToSizeLocID.get(species + "1.20");
@@ -1003,6 +1072,13 @@ public class APBridge {
             APAgent.log("Failed to flush the location queue on connection");
         }
         locationManager.unlockAlreadyEvolvedSpecies();
+
+        if (goaled && !serverKnowsWeGoaled){
+            tryGoal();
+        }
+
+        APAgent.log("Goal condition: " + client.slotData.getGoalCondition());
+
     }
 
     /// Called by BinaryReaderTransformer to debug save file loading
@@ -1034,6 +1110,15 @@ public class APBridge {
         return Texture.newTexture(new MyFile("aaces/aploader/res/" + name)).noFiltering().clampEdges().create();
     }
 
+    private static boolean tryGoal(){
+        if(serverKnowsWeGoaled) return true;
+        goaled = true;
+        if (client == null) return false;
+        if (!client.isConnected()) return false;
+
+        serverKnowsWeGoaled = client.setGameState(ClientStatus.CLIENT_GOAL).getCode() == APResult.ResultCode.SUCCESS;
+        return serverKnowsWeGoaled;
+    }
 
 
 

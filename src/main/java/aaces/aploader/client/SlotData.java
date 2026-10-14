@@ -6,6 +6,8 @@ public class SlotData {
     public int starting_dp;
     public int itempool_dp;
 
+    public int goal_selection;
+
     public int free_evolution;
 
     public int size_checks;
@@ -21,4 +23,19 @@ public class SlotData {
     public boolean freeEvolution() {
         return free_evolution == 1;
     }
+
+    public GoalType getGoalCondition() {
+        switch(goal_selection){
+            case 0:
+                return GoalType.COMPLETIONIST;
+            case 1:
+                return GoalType.CAMEL;
+            default:
+                return GoalType.NONE;
+        }
+    }
+
+
 }
+
+
