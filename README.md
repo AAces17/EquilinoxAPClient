@@ -30,20 +30,22 @@ Archipelago client for the game *Equilinox*.
   </ol>
 </details>
 
-## Setup Instructions
+# Download the Latest Release [Here](https://github.com/AAces17/EquilinoxAPClient/releases/latest)
 
 > [!IMPORTANT]
 > Currently, the mod only supports the Windows version of the game (and has only been tested on the Steam installation). I hope to add support for other operating systems in the future.
 
+## Setup Instructions
+
 ### Host
 Only the host needs to have the Archipelago Client installed. General archipelago installation / world generation will not be covered here, 
-instead see [the official guide](https://archipelago.gg/tutorial/Archipelago/setup_en). The host needs the `equilinox.apworld` file found in the "Releases" tab. Download this file, then double-click it to 
+instead see [the official guide](https://archipelago.gg/tutorial/Archipelago/setup_en). The host needs the `equilinox.apworld` file found in the [Releases](https://github.com/AAces17/EquilinoxAPClient/releases/latest) tab. Download this file, then double-click it to 
 automatically place it in the `custom_worlds` folder. [Click here to view the source code of the .apworld file](https://github.com/AAces17/AAcesArchipelago/tree/main/worlds/equilinox).
 
 ### Player
 
 You need to own a copy of the game to run this mod, it is not a stand-alone application. 
-Download the latest `EquilinoxAP.zip` file from the "Releases" tab. Opening this zip file should show a similarly named folder; place this `EquilinoxAP` folder into the installation directory of the game. 
+Download the latest `EquilinoxAP.zip` file from the [Releases](https://github.com/AAces17/EquilinoxAPClient/releases/latest) tab. Opening this zip file should show a similarly named folder; place this `EquilinoxAP` folder into the installation directory of the game. 
 If you installed the game via Steam, you can find this by going to `Manage -> Browse local files` from the game's library page. After doing this, the game directory should look something like this:
 
 <img width="75%" alt="image" src="https://github.com/user-attachments/assets/01b02f71-98af-4d5b-a550-6c452e3a19f3" />
