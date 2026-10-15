@@ -1,3 +1,7 @@
+<p align="center">
+  <img width="75%" alt="EQAP Logo Color" src="https://github.com/user-attachments/assets/2493c5da-bc15-4ee2-b508-b2e0f799ff74" />
+</p>
+
 # Equilinox AP
 
 Archipelago client for the game *Equilinox*.
