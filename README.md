@@ -98,6 +98,8 @@ You can make the World Name whatever you want\* -- it does not have to start wit
 > [!IMPORTANT]
 > Whenever you launch the game via the mod loader, you *must* either create a new world with the `New World` button, or load an existing world with the `Load World` button. Pressing the `Play` button without first
 > doing one of these will open up a default world, where nothing is saved and you can not connect to a multiworld. If you accidentally press `Play`, just press esc to return to the main menu and connect properly.
+>
+> Once connected, you *can* use the `Play` button to return to the game from the menu.
 
 \**Be weary of including special characters in the name of a save file (see the <a href="#known-issues">Known Issues</a> section)*
 
