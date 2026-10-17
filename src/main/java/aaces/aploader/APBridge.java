@@ -1073,11 +1073,12 @@ public class APBridge {
         }
         locationManager.unlockAlreadyEvolvedSpecies();
 
+        APAgent.log("Goal condition: " + client.slotData.getGoalCondition());
+
         if (goaled && !serverKnowsWeGoaled){
+            APAgent.log("Previously goaled, but did not send. Sending now...");
             tryGoal();
         }
-
-        APAgent.log("Goal condition: " + client.slotData.getGoalCondition());
 
     }
 
