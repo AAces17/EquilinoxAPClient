@@ -206,8 +206,8 @@ public class APBridge {
     /// @param gameMenuGui the GUI we need to modify
     public static void addVersionText(GameMenuGui gameMenuGui){
         Text text = Text.newText(MainApp.VERSION_STRING + " -- EqAP Version " + modVersion).setFontSize(UiSettings.LARGE_FONT).create();
-        text.setColour(ColourPalette.LIGHT_GREY);
-        gameMenuGui.addText(text, 0.625F, 0.445F, 1.0F);
+        text.setColour(ColourPalette.MIDDLE_GREY);
+        gameMenuGui.addText(text, 0.14F, 0.94F, 1.0F);
     }
 
 

@@ -94,14 +94,6 @@ public class GameMenuGuiTransformer implements ClassFileTransformer {
                             super.visitLdcInsn(value);
 
                         }
-                        @Override
-                        public void visitInsn(int opcode){ // Change the y-pos of the logo
-                            if (opcode == Opcodes.FCONST_0){
-                                super.visitLdcInsn(0.05f);
-                            } else {
-                                super.visitInsn(opcode);
-                            }
-                        }
                     };
                 }
                 if ("<init>".equals(name) && "(LgameMenu/GameMenuBackground;)V".equals(descriptor)) {
