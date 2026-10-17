@@ -40,6 +40,7 @@ import instances.Entity;
 import io.github.archipelagomw.APResult;
 import io.github.archipelagomw.ClientStatus;
 import languages.GameText;
+import main.MainApp;
 import mainGuis.*;
 import org.lwjgl.util.vector.Vector2f;
 import org.lwjgl.util.vector.Vector3f;
@@ -70,13 +71,16 @@ import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 @SuppressWarnings("unchecked")
 public class APBridge {
 
     private static final String gameVersion = "1.7.2";
-    private static final String modVersion = "0.1.0";
+    private static final String modVersion = "0.1.1";
 
     public static String host = "";
     public static String slot = "";
@@ -112,8 +116,8 @@ public class APBridge {
     public static void gameManagerInit(SessionManager sm) {
         APAgent.log("DEBUG: GameManager.init() called");
         //sm.loadInitialSession();
-        AP_ICON = loadGuiTexture("archipelago-white-small.png");
-        AP_COLOR = loadGuiTexture("archipelago-color-icon.png");
+        AP_ICON = initCustomTexture("archipelago-white-small.png");
+        AP_COLOR = initCustomTexture("archipelago-color-icon.png");
         try{
             Field SAVESField = SessionManager.class.getDeclaredField("SAVES");
             SAVESField.setAccessible(true);
@@ -201,9 +205,9 @@ public class APBridge {
     ///
     /// @param gameMenuGui the GUI we need to modify
     public static void addVersionText(GameMenuGui gameMenuGui){
-        Text text = Text.newText("Version " + gameVersion + " -- EqAP Version " + modVersion).setFontSize(UiSettings.LARGE_FONT).create();
+        Text text = Text.newText(MainApp.VERSION_STRING + " -- EqAP Version " + modVersion).setFontSize(UiSettings.LARGE_FONT).create();
         text.setColour(ColourPalette.LIGHT_GREY);
-        gameMenuGui.addText(text, 0.6F, 0.3F, 1.0F);
+        gameMenuGui.addText(text, 0.625F, 0.445F, 1.0F);
     }
 
 
@@ -602,18 +606,39 @@ public class APBridge {
 
     }
 
-    /// WIP
+
+    /// Called when trying to load an image. If it is one of ours, we handle it accordingly
+    /// (ie, get the asset from the external "res" folder). If it is a game asset, just
+    /// pass it through
     public static InputStream getFileInputStream(MyFile file) {
         //APAgent.log("Loading texture: " + file.getName());
         if(file.getPath().contains("archipelago")){
+
             APAgent.log("Loading AP texture: " + file.getPath());
-            InputStream in = APBridge.class.getResourceAsStream(file.getPath());
-            if (in == null){
+
+            Path path;
+
+            if(file.getPath().contains("/res/guis/")){
+                path = Paths.get(file.getPath().replace("/res/guis/", "res/"));
+            } else {
+                path = Paths.get(file.getPath().substring(1)); // remove the leading /
+            }
+
+            try {
+                if (Files.exists(path)){
+                    APAgent.log("Found the file, returning the InputStream");
+                    return Files.newInputStream(path);
+                } else {
+                    APAgent.log("File not found, defaulting");
+                    MyFile def = new MyFile(GuiMaster.GUIS_LOC, "colourWheel.png");
+                    return def.getInputStream();
+                }
+            } catch (Exception e) {
                 APAgent.log("Null texture file, defaulting");
                 MyFile def = new MyFile(GuiMaster.GUIS_LOC, "colourWheel.png");
                 return def.getInputStream();
             }
-            return in;
+
         } else {
             //APAgent.log("    Game texture");
             return file.getInputStream();
@@ -1106,9 +1131,8 @@ public class APBridge {
     }
 
 
-    private static Texture loadGuiTexture(String name) {
-        // TODO: Figure out how to load an image...
-        return Texture.newTexture(new MyFile("aaces/aploader/res/" + name)).noFiltering().clampEdges().create();
+    private static Texture initCustomTexture(String name) {
+        return Texture.newTexture(new MyFile("res/" + name)).noFiltering().clampEdges().create();
     }
 
     private static boolean tryGoal(){

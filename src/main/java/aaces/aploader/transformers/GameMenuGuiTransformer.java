@@ -43,7 +43,67 @@ public class GameMenuGuiTransformer implements ClassFileTransformer {
                         exceptions
                 );
 
+                if ("<clinit>".equals(name)) {
 
+                    APAgent.log(
+                            "Found GameMenuGui <clinit>"
+                    );
+
+                    return new MethodVisitor(
+                            Opcodes.ASM9,
+                            mv
+                    ) {
+
+                        @Override
+                        public void visitLdcInsn(Object value) {
+
+                            if (value instanceof String){
+                                String strValue = (String) value;
+                                if("equilinoxLogo3.png".equals(strValue)){
+                                    APAgent.log("Found game logo, replacing.");
+                                    value = "archipelago-main-logo.png";
+                                }
+                            }
+                            super.visitLdcInsn(value);
+
+                        }
+                    };
+                }
+                if ("addHeader".equals(name) && "(Ltextures/Texture;)LuserInterfaces/GuiImage;".equals(descriptor)) {
+
+                    APAgent.log(
+                            "Found GameMenuGui addHeader"
+                    );
+
+                    return new MethodVisitor(
+                            Opcodes.ASM9,
+                            mv
+                    ) {
+
+                        @Override
+                        public void visitLdcInsn(Object value) {
+
+                            if (value instanceof Float){
+                                float fvalue = (float) value;
+                                if(Math.abs(fvalue - 4.0f) < 0.01f){
+                                    value = 2.8f; // Changing the "desired aspect ratio" to account for the new image size
+                                } else if(Math.abs(fvalue - 0.4f) < 0.01f){
+                                    value = 0.5f; // Changing the y-scale of the image
+                                }
+                            }
+                            super.visitLdcInsn(value);
+
+                        }
+                        @Override
+                        public void visitInsn(int opcode){ // Change the y-pos of the logo
+                            if (opcode == Opcodes.FCONST_0){
+                                super.visitLdcInsn(0.05f);
+                            } else {
+                                super.visitInsn(opcode);
+                            }
+                        }
+                    };
+                }
                 if ("<init>".equals(name) && "(LgameMenu/GameMenuBackground;)V".equals(descriptor)) {
 
                     APAgent.log("Found GameMenuGui constructor");
