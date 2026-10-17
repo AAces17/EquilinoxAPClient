@@ -78,30 +78,32 @@ To run the game without the Archipelago mod, open the game via Steam or the orig
 
 ### For the first time
 
-After running the game via the mod loader, the main menu should look something like this:
+After running the game via the mod loader, the main menu should look something like this. If you see a rainbow oval instead of the logo, that means the mod failed to load the images.
 
 <img width="75%" alt="image" src="https://github.com/user-attachments/assets/57baf3c8-0a07-460d-8989-919bae2f7e00" />
 </br>
 
 
-To connect to a multiworld for the first time, click the `New World (Archipelago)` button and input the connection information: 
+To connect to a multiworld for the first time, click the `New World (Archipelago)` button and input the connection information. 
+To edit a text field, click the square button on the right-hand side of it. Then click that button again to stop editing that field before you start editing the next field,
+or you will be typing in both fields at the same time (see <a href="#known-issues">Known Issues</a>).
 
 <img width="75%" alt="image" src="https://github.com/user-attachments/assets/6d7e4db4-a378-4e7a-b7ee-b56349830811" />
 </br>
-
-> [!IMPORTANT]
-> To edit a text field, click the square button on the right-hand side of it. Then click that button again to stop editing that field before you start editing the next field,
-> or you will be typing in both fields at the same time (see Known Issues).
 
   
 Then select the desired world options (note, only "Normal" mode is supported, so the option to change the Game Mode has been removed) and click `Generate World & Connect`. 
 You can make the World Name whatever you want\* -- it does not have to start with "\[AP\]".  
 
-\**Be weary of including special characters (see the Known Issues section)*
+> [!IMPORTANT]
+> Whenever you launch the game via the mod loader, you *must* either create a new world with the `New World` button, or load an existing world with the `Load World` button. Pressing the `Play` button without first
+> doing one of these will open up a default world, where nothing is saved and you can not connect to a multiworld. If you accidentally press `Play`, just press esc to return to the main menu and connect properly.
+
+\**Be weary of including special characters in the name of a save file (see the <a href="#known-issues">Known Issues</a> section)*
 
 ### Reconnecting to an existing world
 
-To reload an existing world, simply load the save file for the world and the mod will automatically attempt to reconnect (the slot, host, and password are saved in the save file):
+To reload an existing world, simply load the save file for the world and the mod will automatically attempt to reconnect (the connection info is saved in the save file):
 
 <img width="75%" alt="image" src="https://github.com/user-attachments/assets/e92790d0-4949-4afe-a386-fb5779837d78" />
 
