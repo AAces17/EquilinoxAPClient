@@ -58,9 +58,9 @@ If you installed the game via Steam, you can find this by going to `Manage -> Br
 > [!WARNING]
 > The mod should not be able to touch your existing save files, since it will create a new folder for AP saves. However, to be safe, I recommend backing up your existing save files. To do this, create a copy of the `Equilinox_0_Saves` folder somewhere safe.
 
-On a fresh installation of the mod, this `EquilinoxAP` folder should have three files (the mod .jar and two .bat files):
+On a fresh installation of the mod, this `EquilinoxAP` folder should have a `res` folder and three files (the mod .jar and two .bat files):
 
-<img width="75%" alt="image" src="https://github.com/user-attachments/assets/3446a936-744a-4c41-ad0e-31badf843c39" />
+<img width="75%" alt="image" src="https://github.com/user-attachments/assets/d36644a5-417e-4d26-a524-753612fd6a74" />
 
 
 To run the game with the Archipelago mod, double click the `Run Equilinox AP.bat` file. A terminal window will open, but you can close this if you'd like. 
@@ -69,8 +69,8 @@ To run the game with the Archipelago mod, double click the `Run Equilinox AP.bat
 > The console window logs information about the game (saved in the `APEqLog.log` file), including the AP Server connection info (the host, slot, *and password*) in plain text. You should close this window if you are streaming the game anywhere, just to be safe. 
 
 When running the game this way, 
-a new UserConfigs file is created with the default settings; if you would like to copy use the same options as the vanilla game (graphic settings, etc), 
-copy the `Equilinox_0_UserConfigs.dat` file from the root directory into the EquilinoxAP folder.
+a new UserConfigs file is created with the default settings; if you would like any options you changed (graphic settings, etc) to carry over to the modded launch, 
+copy the `Equilinox_0_UserConfigs.dat` file from the root directory into the EquilinoxAP folder. Alternatively, just change the settings again once the game loads, after which they will be saved.
 
 To run the game without the Archipelago mod, open the game via Steam or the original .exe file -- the mod is run if and only if one of the .bat files in the EquilinoxAP folder is used to start the game.
 
@@ -78,14 +78,16 @@ To run the game without the Archipelago mod, open the game via Steam or the orig
 
 ### For the first time
 
-After running the game via the mod loader, the main menu should look like this (notice the mod version number under the title, and the word "Archipelago" on the New World button):
+After running the game via the mod loader, the main menu should look something like this:
 
-<img width="75%" alt="image" src="https://github.com/user-attachments/assets/db6f6099-f693-4b37-9659-4590fa314ca4" /></br>
+<img width="75%" alt="image" src="https://github.com/user-attachments/assets/57baf3c8-0a07-460d-8989-919bae2f7e00" />
+</br>
 
 
 To connect to a multiworld for the first time, click the `New World (Archipelago)` button and input the connection information: 
 
-<img width="75%" alt="image" src="https://github.com/user-attachments/assets/13d0b209-b269-441b-bb07-03545d75605d" /></br>
+<img width="75%" alt="image" src="https://github.com/user-attachments/assets/6d7e4db4-a378-4e7a-b7ee-b56349830811" />
+</br>
 
 > [!IMPORTANT]
 > To edit a text field, click the square button on the right-hand side of it. Then click that button again to stop editing that field before you start editing the next field,
@@ -111,7 +113,7 @@ This is something I plan to add eventually, but in the meantime, if you are play
 
 If the server port changes, or if you made a typo when creating the save file and don't want to back out an make a new world, you can change this in-game by clicking the "Archipelago Settings" button on the toolbar: 
 
-<img width="100%" alt="image" src="https://github.com/user-attachments/assets/ef5ab189-6a20-4dd1-a392-a76cfe20ba22" />
+<img width="90%" alt="image" src="https://github.com/user-attachments/assets/e86b678e-08d7-412f-83c7-8238d093ae92" />
 
 
 > [!CAUTION]
@@ -119,7 +121,8 @@ If the server port changes, or if you made a typo when creating the save file an
 
 You can then update the connection info and click "Connect". Eventually, I plan on adding info about completion progress and connection status to this menu.
 
-<img width="75%" alt="image" src="https://github.com/user-attachments/assets/baa92bd7-20e7-4f78-847a-71840a9dd5ee" />
+<img width="75%" alt="image" src="https://github.com/user-attachments/assets/4086b344-7664-4d98-ab4e-e2e26882910d" />
+
 
 ## Updating the Mod
 
@@ -219,7 +222,8 @@ Filler DP items range from 100dp to 10,000dp, with amounts around 1,000 most com
     If you create a world that later will not show up in the "load world" menu, send me the world save file and I'll take a look at it (see below for instructions on how to do this, in the Reporting Issues section).
   </li>
   <li>
-    There are currently no Archipelago logos/icons in game. I plan to add them in a future update, replacing the rainbow circle currently used. 
+    If the mod fails to load the images, they are replaced with a rainbow wheel. This is most noticable on the main menu, where the game logo would get replaced with a rainbow oval. This is not an issue in and of itself, but it does
+    mean there was an issue loading the assets. Make sure there is a folder called "res" in the mod folder, and that it contains .png files.
   </li>
   <li>
     Deathlink is not currently supported. If you have ideas for what deathlink would look like in this game, feel free to share in the Equilinox thread in the AP discord server.
@@ -249,7 +253,7 @@ Inside this folder should be your save files. Note that the game can not read th
 <img width="80%" alt="image" src="https://github.com/user-attachments/assets/83939a30-3b51-4ab2-8248-03f89a327d92" />
 
 > [!WARNING]
-> Connection information is saved in your save file. It is not visible just by opening the .dat file, but if someone else loads your save file in game, it will try to connect automatically.
+> Connection information is saved in your save file. Without the game, the .dat file alone is not enough to view it (ie, you can't just open the file in Notepad). But if someone else loads your save file in game, it will try to connect automatically.
 
 If you don't feel comfortable sharing these files in the public server, you are welcome to DM them to me on Discord instead (username `aaces17`).
 
