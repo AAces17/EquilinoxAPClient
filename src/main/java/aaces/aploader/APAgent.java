@@ -28,7 +28,8 @@ public class APAgent {
             new EvolveProgressUi2Transformer(),
             new ChildStateSubClassTransformer(),
             new ToolbarTransformer(),
-            new TextureManagerTransformer()
+            new TextureManagerTransformer(),
+            new MainAppTransformer()
     };
 
     public static void premain(
