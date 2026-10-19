@@ -565,6 +565,8 @@ public class APBridge {
     }
 
 
+    /// Adds the ap button to the in-game toolbar
+    /// @param toolbar the toolbar
     public static void addAPToolbarButton(Toolbar toolbar){
         try {
             Method addButton = Toolbar.class.getDeclaredMethod("addButton", Texture.class, float.class, ClickListener.class);
@@ -602,8 +604,6 @@ public class APBridge {
             APAgent.log("Error adding AP Toolbar button");
             APAgent.log(e.getMessage());
         }
-
-
     }
 
 
@@ -676,227 +676,6 @@ public class APBridge {
         APAgent.log("In-game initialized");
     }
 
-    /// This was used to create a script to view the contents of an Equilinox save file, it is not used by the mod.
-    private static void componentAnalysis(){
-        try {
-            Field tasksField = TaskManager.class.getDeclaredField("tasks");
-            tasksField.setAccessible(true);
-            Map<Integer, Task> tasks = (Map<Integer, Task>) tasksField.get(GameManager.getTaskManager());
-            for (int i : tasks.keySet()){
-                Task task = tasks.get(i);
-                StringBuilder req_string = new StringBuilder();
-                for (TaskRequirement requirement : task.getRequirements(false)){
-                    switch(requirement.getClass().toString()) {
-                        case "class tasks.HappyEntitiesReq":
-                            req_string.append("i");
-                            break;
-                        case "class tasks.ColourEntityReq":
-                        case "class tasks.EntityCountReq":
-                            req_string.append("i");
-                            break;
-                        case "class tasks.EvolutionReq":
-                            req_string.append("i");
-                            break;
-                        case "class tasks.EatReq":
-                            req_string.append("i");
-                            break;
-                        case "class tasks.BreedReq":
-                            req_string.append("i");
-                            break;
-                        case "class tasks.TaskCompletorRequirement":
-                            req_string.append("i");
-                            break;
-                        case "class tasks.BuildReq":
-                            req_string.append("i");
-                            break;
-                        case "class tasks.BaaReq":
-                            req_string.append("i");
-                            break;
-                        case "class tasks.ButterflyCatchReq":
-                            req_string.append("i");
-                            break;
-                        case "class tasks.HoneyReq":
-                            req_string.append("i");
-                            break;
-                        case "class tasks.TreeCutReq":
-                            req_string.append("i");
-                            break;
-                        case "class tasks.HoneyHarvesterReq":
-                            req_string.append("i");
-                            break;
-                        case "class tasks.HuntingReq":
-                            req_string.append("i");
-                            break;
-                        case "class tasks.SpittingRequirement":
-                            req_string.append("i");
-                            break;
-                        case "class tasks.BloomingReq":
-                            req_string.append("i");
-                            break;
-                        case "class tasks.FlyCatchReq":
-                            req_string.append("i");
-                            break;
-                        case "class tasks.EagleCatchReq":
-                            req_string.append("i");
-                            break;
-                        case "class tasks.HoleDigReq":
-                            req_string.append("i");
-                            break;
-                        default:
-                            break;
-                    }
-                }
-                System.out.println(i + ": \"" + req_string + "\",");
-            }
-        } catch (Exception e){
-            e.printStackTrace();
-        }
-        try {
-            for (Blueprint blueprint : BlueprintRepository.getAllBlueprints()) {
-                int id = blueprint.getId();
-                System.out.println(id + ": \"" + blueprint.getName() + "\",");
-                if(true) continue;
-                //if (id != 20) continue;
-                Set<ComponentType> componentTypes = blueprint.getComponentTypes();
-                Set<ComponentBlueprint> componentBlueprints = new HashSet<>();
-                for (ComponentType type : componentTypes) {
-                    componentBlueprints.add(blueprint.getComponent(type));
-                }
-                int numComponents = componentBlueprints.size();
-
-                Field componentsField = Blueprint.class.getDeclaredField("components");
-                componentsField.setAccessible(true);
-                Map<ComponentType, ComponentBlueprint> components = (Map<ComponentType, ComponentBlueprint>) componentsField.get(blueprint);
-
-                //System.out.println("Blueprint id: " + id);
-                //System.out.println("\tNum Components: " + numComponents);
-                StringBuilder loadString = new StringBuilder();
-
-                for (ComponentBlueprint compBlueprint : components.values()) {
-
-                    Component component = compBlueprint.createInstance();
-
-                    // comp trait load
-                    List<TraitBlueprint> traitBlueprints = compBlueprint.getTraits();
-                    //System.out.println("\t\tComponent: " + compBlueprint.getComponentType().toString());
-                    if (traitBlueprints != null) {
-                        for (TraitBlueprint traitBlueprint : traitBlueprints) {
-                            //System.out.println("\t\t\t"+traitBlueprint.getName());
-                            switch (traitBlueprint.getName()) {
-                                case "Disease Resist":
-                                case "Sting Power":
-                                case "Speed":
-                                case "Bounce Power":
-                                case "Edibility":
-                                case "Productivity":
-                                case "Yield":
-                                case "Attack Power":
-                                case "Honey Production":
-                                case "Anger":
-                                case "Size":
-                                    loadString.append("ffi");
-                                    break;
-                                case "Colour":
-                                    loadString.append("c");
-                                    break;
-                            }
-                        }
-                    }
-                    // then component load
-                    boolean isAnimal = blueprint.getSpeciesClassification().isTypeOf(Classifier.getAnimalClassification());
-                    switch (component.getClass().toString()) {
-                        case "class growth.DynamicGrowthComponent":
-                            loadString.append("b!{iff}");
-                            break;
-                        case "class toolbox.Transformation":
-                            loadString.append("vfff");
-                            break;
-                        case "class sleeping.SleepComponent":
-                            loadString.append("b");
-                            break;
-                        case "class health.LifeComponent":
-                            loadString.append("ffffsf");
-                            if (isAnimal) {
-                                loadString.append("bf");
-                            }
-                            loadString.append("bfib?{i}");
-                            break;
-                        case "class components.NameComponent":
-                            loadString.append("Sb");
-                            break;
-                        case "class eating.EatingComponent":
-                            loadString.append("fi:{S}");
-                            break;
-                        case "class components.InformationComponent":
-                            loadString.append("vi");
-                            break;
-                        case "class components.MeshComponent":
-                            loadString.append("i");
-                            break;
-                        case "class growth.StaticGrowthComponent":
-                            loadString.append("b!{iff}");
-                            break;
-                        case "class fruit.FruiterComponent":
-                            loadString.append("i");
-                            break;
-                        case "class food.FoodComponent":
-                            FoodComponent foodComponent = (FoodComponent) component;
-                            try {
-                                Field sectionsField = FoodComponent.class.getDeclaredField("sections");
-                                sectionsField.setAccessible(true);
-                                Map<FoodSectionType, FoodSection> sections = (Map<FoodSectionType, FoodSection>) sectionsField.get(foodComponent);
-                                for (FoodSection section : sections.values()) {
-                                    if (section instanceof FoodToShare) {
-                                        loadString.append("i");
-                                    }
-                                }
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                            break;
-                        case "class perching.PerchComponent":
-                            loadString.append("b?{i:{ii}}");
-                            break;
-                        case "class shellHide.ShellHideComponent":
-                            loadString.append("b");
-                            break;
-                        case "class fruit.DecayComponent":
-                            loadString.append("f");
-                            break;
-                        case "class fighting.HostileComponent":
-                            loadString.append("f");
-                            break;
-                        case "class hiveComponents.HiveComponent":
-                            loadString.append("i");
-                            break;
-                        case "class building.BuildComponent":
-                            loadString.append("i");
-                            break;
-                        case "class beavers.BeaverComponent":
-                            loadString.append("b");
-                            break;
-                        case "class building.DecomposeComponent":
-                            loadString.append("b");
-                            break;
-                        case "class equipping.ItemComponent":
-                            loadString.append("f");
-                            break;
-                        case "class nightBloom.BloomComponent":
-                            loadString.append("if");
-                            break;
-                        default:
-                            break;
-                    }
-
-                }
-                String lString = loadString.toString();
-
-                System.out.println(id + ": \"" + lString + "\",");
-            }
-        } catch (Exception e){
-            e.printStackTrace();
-        }
-    }
 
     /// Gets the current version of the AP mod
     public static String getModVersion(){
@@ -1131,10 +910,15 @@ public class APBridge {
     }
 
 
+    /// Convert an external image asset into a form the game's GUIs expect
+    /// @param name the exact file name (no path)
+    /// @return the game's desired Texture object for this kind of thing
     private static Texture initCustomTexture(String name) {
         return Texture.newTexture(new MyFile("res/" + name)).noFiltering().clampEdges().create();
     }
 
+
+    /// Tries to tell the server that we goaled
     private static boolean tryGoal(){
         if(serverKnowsWeGoaled) return true;
         goaled = true;
