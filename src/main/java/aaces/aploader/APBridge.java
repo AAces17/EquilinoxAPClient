@@ -1,18 +1,11 @@
 package aaces.aploader;
 
-import aaces.aploader.client.APClient;
-import aaces.aploader.client.GoalType;
-import aaces.aploader.client.ItemManager;
-import aaces.aploader.client.LocationManager;
+import aaces.aploader.client.*;
 import audio.SoundMaestro;
 import basics.DisplayManager;
 import blueprints.Blueprint;
 import breedingTraits.FloatTrait;
 import breedingTraits.Trait;
-import breedingTraits.TraitBlueprint;
-import classification.Classifier;
-import componentArchitecture.Component;
-import componentArchitecture.ComponentBlueprint;
 import componentArchitecture.ComponentType;
 import components.InformationComponent;
 import events.EventData;
@@ -21,10 +14,6 @@ import extraInfoGui.ExtraInfoContent;
 import extraInfoGui.ExtraInfoGui;
 import extraInfoGui.ExtraToolbarGui;
 import fontRendering.Text;
-import food.FoodComponent;
-import food.FoodSection;
-import food.FoodSectionType;
-import food.FoodToShare;
 import gameManaging.GameManager;
 import gameManaging.GameState;
 import gameMenu.DnaButtonGui;
@@ -44,7 +33,6 @@ import main.MainApp;
 import mainGuis.*;
 import org.lwjgl.util.vector.Vector2f;
 import org.lwjgl.util.vector.Vector3f;
-import resourceManagement.BlueprintRepository;
 import saves.SaveSlot;
 import saves.Saves;
 import session.GameMode;
@@ -79,12 +67,13 @@ import java.util.*;
 @SuppressWarnings("unchecked")
 public class APBridge {
 
-    private static final String gameVersion = "1.7.2";
-    private static final String modVersion = "0.1.1";
+    private static final String modVersion = "0.1.2";
 
     public static String host = "";
     public static String slot = "";
     public static String password = "";
+
+    public static long modVersionAtGeneration = modVersionToLong();
 
     public static boolean goaled = false;
     public static boolean serverKnowsWeGoaled = false;
@@ -114,10 +103,12 @@ public class APBridge {
     ///
     /// @param sm the SessionManager instance being intercepted
     public static void gameManagerInit(SessionManager sm) {
-        APAgent.log("DEBUG: GameManager.init() called");
-        //sm.loadInitialSession();
+        //APAgent.log("DEBUG: GameManager.init() called");
+
         AP_ICON = initCustomTexture("archipelago-white-small.png");
         AP_COLOR = initCustomTexture("archipelago-color-icon.png");
+        SlotData.loadDefaults();
+
         try{
             Field SAVESField = SessionManager.class.getDeclaredField("SAVES");
             SAVESField.setAccessible(true);
@@ -224,6 +215,7 @@ public class APBridge {
     ///
     /// @param task the task completed
     public static void onTaskComplete(Task task){
+        if(!saveLoaded) return;
         APAgent.log("task completed: " + task.name);
 
         SoundMaestro.playSystemSound(GuiSounds.CASH);
@@ -239,7 +231,7 @@ public class APBridge {
 
             trySendTaskCheck(task);
 
-            boolean distribute_cash_rewards = APClient.Connected() ? client.slotData.tasksRewardDP() : true;
+            boolean distribute_cash_rewards = SlotData.tasksRewardDP();
 
             if(distribute_cash_rewards) {
                 for (Reward reward : task.getRewards()) {
@@ -278,8 +270,8 @@ public class APBridge {
             }
 
             protected void init() {
-                boolean showCashRewards = APClient.Connected() ? client.slotData.tasksRewardDP() : true;
-                boolean completionist_goal = APClient.Connected() ? client.slotData.getGoalCondition() == GoalType.COMPLETIONIST : false;
+                boolean showCashRewards = SlotData.tasksRewardDP();
+                boolean completionist_goal = SlotData.getGoalCondition() == GoalType.COMPLETIONIST;
                 try {
                     Field taskField = TaskInfoFrameUi.class.getDeclaredField("task");
                     taskField.setAccessible(true);
@@ -400,6 +392,7 @@ public class APBridge {
         APAgent.log("Trying to save the AP state of the game");
         try {
             writer.writeLong(modVersionToLong());
+            writer.writeLong(modVersionAtGeneration);
 
             writer.writeString(host);
             writer.writeString(slot);
@@ -423,6 +416,8 @@ public class APBridge {
             writer.writeBoolean(goaled);
             if (goaled) writer.writeBoolean(serverKnowsWeGoaled);
 
+            SlotData.saveSlotData(writer);
+
         } catch (IOException e) {
             APAgent.log("Couldn't save AP info!");
             APAgent.log("\t"+e.getMessage());
@@ -430,32 +425,6 @@ public class APBridge {
         }
     }
 
-    private static long modVersionToLong(){
-        String[] exps = modVersion.split("\\.");
-        return (long) (Math.pow(5, Integer.parseInt(exps[0])) *
-                Math.pow(3, Integer.parseInt(exps[1])) *
-                Math.pow(2, Integer.parseInt(exps[2])));
-    }
-
-    public static int[] getPrimeFactorCounts(long number, List<Long> knownPrimes) {
-        int[] counts = new int[knownPrimes.size()];
-        long remainder = number;
-
-        int index = 0;
-        for (long prime : knownPrimes) {
-            int count = 0;
-
-            while (remainder > 1 && remainder % prime == 0) {
-                count++;
-                remainder /= prime;
-            }
-
-            counts[index] = count;
-            index++;
-        }
-
-        return counts;
-    }
 
     /// Called when the game tries to load a save file.
     /// Tries to load the previously saved AP things from a save file. If the save
@@ -464,10 +433,18 @@ public class APBridge {
     public static void loadAPState(BinaryReader reader){
         APAgent.log("Trying to load saved ap info");
         try {
-            long modVersionInSave = reader.readLong();
-            int[] versionNumbers = getPrimeFactorCounts(modVersionInSave, Arrays.asList(5L, 3L, 2L));
+            // For save file format
+            long versionLastSavedOn = reader.readLong();
+            int[] versionNumbers = getVersionFromLong(versionLastSavedOn);
             String loadedModVersion = versionNumbers[0] + "." + versionNumbers[1] + "." + versionNumbers[2];
-            boolean lastSavedOnLatestVersion = modVersionInSave == modVersionToLong();
+            boolean lastSavedOnLatestVersion = versionLastSavedOn == modVersionToLong();
+
+            // For client behavior that depends on the initial version (should try to get from the .apworld?)
+            if(versionLastSavedOn >= 102) { // 0.1.2
+                modVersionAtGeneration = reader.readLong();
+            } else {
+                modVersionAtGeneration = 101;
+            }
 
             host = reader.readString();
             slot = reader.readString();
@@ -484,6 +461,12 @@ public class APBridge {
             goaled = reader.readBoolean();
             if (goaled) serverKnowsWeGoaled = reader.readBoolean();
 
+            if (versionLastSavedOn >= 102) { // 0.1.2
+                SlotData.loadSlotDataFromSave(reader);
+            } else {
+                SlotData.loadDefaults();
+            }
+
             APAgent.log("Trying to connect: host: "+host+", slot: "+slot+", password: "+password + ", item index: "+itemManager.getIndex());
             client = APClient.tryConnect(host, slot, password, itemManager, locationManager, true);
         } catch (Exception e) {
@@ -495,6 +478,7 @@ public class APBridge {
             locationManager = new LocationManager();
             goaled = false;
             serverKnowsWeGoaled = false;
+            SlotData.loadDefaults();
             sendNotification("Couldn't Load Saved AP Info!", "Try connecting from the AP menu in the toolbar, or create a new world.");
         }
         saveLoaded = true;
@@ -536,7 +520,7 @@ public class APBridge {
     /// Called by the Evolution UI to test if we have enough dp to evolve. If "Free Evolution" is on,
     /// we make the UI think we have enough dp.
     public static int getDpCountForEvolution(){
-        boolean freeEvolution = APClient.Connected() ? client.slotData.freeEvolution() : true;
+        boolean freeEvolution = SlotData.freeEvolution();
         if(freeEvolution){
             return 999999999;
         } else {
@@ -549,7 +533,7 @@ public class APBridge {
     /// @param info The information component containing the original price
     /// @return `0` if "Free Evolution" is enabled, `info.getPrice()` otherwise
     public static int getEvolutionPrice(InformationComponent.InformationCompBlueprint info){
-        boolean freeEvolution = APClient.Connected() ? client.slotData.freeEvolution() : true;
+        boolean freeEvolution = SlotData.freeEvolution();
         if(freeEvolution){
             return 0;
         } else {
@@ -800,17 +784,15 @@ public class APBridge {
         String speciesName = speciesEvolved.getName();
         APAgent.log("Evolution occurred! Name: " + speciesName);
 
-        if(speciesName.equals("Camel")){
-            if (client != null) {
-                if (client.slotData.getGoalCondition() == GoalType.CAMEL){
-                    if(tryGoal()){
-                        sendNotification("Goal Complete!", "You evolved a camel and therefore completed the goal!");
-                    } else {
-                        sendNotification("Goal Completed, but not sent!", "You completed your goal, but we failed to tell the server. Save and exit, then reload and reconnect to try again.");
-                    }
+        if(speciesName.equals("Camel")) {
+            if (SlotData.getGoalCondition() == GoalType.CAMEL) {
+                if (tryGoal()) {
+                    sendNotification("Goal Complete!", "You evolved a camel and therefore completed the goal!");
                 } else {
-                    trySendEvolutionCheck(speciesName);
+                    sendNotification("Goal Completed, but not sent!", "You completed your goal, but we failed to tell the server. Save and exit, then reload and reconnect to try again.");
                 }
+            } else {
+                trySendEvolutionCheck(speciesName);
             }
         } else {
             trySendEvolutionCheck(speciesName);
@@ -839,9 +821,9 @@ public class APBridge {
     /// Called whenever a new entity spawns to check its size
     private static void processNewSpeciesSize(String species, float size){
         if(!saveLoaded) return;
-        if(!APClient.Connected()) return;
-        if(!client.slotData.includeSizeChecks()) return;
-        if(client.slotData.getGoalCondition() == GoalType.CAMEL && species.equals("Camel")) return;
+
+        if(!SlotData.includeSizeChecks()) return;
+        if(SlotData.getGoalCondition() == GoalType.CAMEL && species.equals("Camel")) return;
 
         if (size >= 1.195){
             int locId = LocationManager.SpeciesAndSizeToSizeLocID.get(species + "1.20");
@@ -866,18 +848,23 @@ public class APBridge {
 
     /// Called on a successful connection to an Archipelago server to properly resync
     public static void onConnect(){
+
+        SlotData.setCachedOnConnect(client);
+
         for(Task task : GameManager.getTaskManager().getTasks()){
             if (task.getState() == TaskState.COMPLETE) continue;
             task.unlock();
         }
+
         lockShops();
         setCheckedLocs(client.getLocationManager().getCheckedLocations());
+        locationManager.unlockAlreadyEvolvedSpecies();
+
         if (!tryFlushLocationQueue(false)){
             APAgent.log("Failed to flush the location queue on connection");
         }
-        locationManager.unlockAlreadyEvolvedSpecies();
 
-        APAgent.log("Goal condition: " + client.slotData.getGoalCondition());
+        APAgent.log("Goal condition: " + SlotData.getGoalCondition());
 
         if (goaled && !serverKnowsWeGoaled){
             APAgent.log("Previously goaled, but did not send. Sending now...");
@@ -927,6 +914,34 @@ public class APBridge {
 
         serverKnowsWeGoaled = client.setGameState(ClientStatus.CLIENT_GOAL).getCode() == APResult.ResultCode.SUCCESS;
         return serverKnowsWeGoaled;
+    }
+
+
+    /// Converts the mod version X.Y.Z to the long XXYYZZ. Used for safer save file loading
+    private static long modVersionToLong(){
+        //TODO: Make this an int on the 0.2.0 update?
+        String[] exps = modVersion.split("\\.");
+        return 10000L * Integer.parseInt(exps[0]) + 100L * Integer.parseInt(exps[1]) + Integer.parseInt(exps[2]);
+    }
+
+
+    /// Used to undo {@link modVersionToLong}
+    public static int[] getVersionFromLong(long number) {
+        String numberAsString = String.valueOf(number);
+        int major = 0;
+        int minor;
+
+        if(numberAsString.length() >= 5){
+            major = Integer.parseInt(numberAsString.substring(0, numberAsString.length() - 4));
+        }
+        if(numberAsString.length() == 3){
+            minor = Character.getNumericValue(numberAsString.charAt(0));
+        } else {
+            minor = Integer.parseInt(numberAsString.substring(numberAsString.length() - 4, numberAsString.length() - 2));
+        }
+        int bugs = Integer.parseInt(numberAsString.substring(numberAsString.length() - 2));
+
+        return new int[]{major, minor, bugs};
     }
 
 
