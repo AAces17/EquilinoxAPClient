@@ -467,7 +467,7 @@ public class APBridge {
                 SlotData.loadDefaults();
             }
 
-            APAgent.log("Trying to connect: host: "+host+", slot: "+slot+", password: "+password + ", item index: "+itemManager.getIndex());
+            APAgent.log("Trying to connect: host: "+host+", slot: "+slot+", password: "+password.replaceAll(".","*") + ", item index: "+itemManager.getIndex());
             client = APClient.tryConnect(host, slot, password, itemManager, locationManager, true);
         } catch (Exception e) {
             APAgent.log("couldn't load the saved state (this can happen if trying to load a world created without this mod installed)");
@@ -677,7 +677,7 @@ public class APBridge {
         host = h;
         slot = s;
         password = p;
-        APAgent.log("Trying to generate a world: host: "+host+", slot: "+slot+", password: "+password);
+        APAgent.log("Trying to generate a world: host: "+host+", slot: "+slot+", password: "+password.replaceAll(".","*"));
         itemManager = new ItemManager(0);
         locationManager = new LocationManager();
         client = APClient.tryConnect(host, slot, password, itemManager, locationManager, true);
@@ -696,7 +696,7 @@ public class APBridge {
         password = p;
         itemManager = im;
         locationManager = lm;
-        APAgent.log("Trying to re/connect in an existing world: host: "+host+", slot: "+slot+", password: "+password);
+        APAgent.log("Trying to re/connect in an existing world: host: "+host+", slot: "+slot+", password: "+password.replaceAll(".","*"));
         client = APClient.tryConnect(host, slot, password, itemManager, locationManager, false);
     }
 

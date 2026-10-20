@@ -47,7 +47,7 @@ public class APClient extends Client {
                 tryDisconnect();
             }
         }
-        APAgent.log("Trying to connect with host: "+host+", slot: "+slot+", password: "+password);
+        APAgent.log("Trying to connect with host: "+host+", slot: "+slot+", password: "+password.replaceAll(".","*"));
         client = new APClient(slot, password, itemManager, locationManager);
         lastHostAttempt = host;
         try {
