@@ -65,9 +65,6 @@ On a fresh installation of the mod, this `EquilinoxAP` folder should have a `res
 
 To run the game with the Archipelago mod, double click the `Run Equilinox AP.bat` file. A terminal window will open, but you can close this if you'd like. 
 
-> [!CAUTION]
-> The console window logs information about the game (saved in the `APEqLog.log` file), including the AP Server connection info (the host, slot, *and password*) in plain text. You should close this window if you are streaming the game anywhere, just to be safe. 
-
 When running the game this way, 
 a new UserConfigs file is created with the default settings; if you would like any options you changed (graphic settings, etc) to carry over to the modded launch, 
 copy the `Equilinox_0_UserConfigs.dat` file from the root directory into the EquilinoxAP folder. Alternatively, just change the settings again once the game loads, after which they will be saved.
@@ -244,11 +241,8 @@ Feel free to report bugs or other issues in the Equilinox thread on the AP disco
 If you encounter a bug, please make a copy of the `APEqLog.log` file in the EquilinoxAP mod directory before restarting the game (this file gets wiped each time the game starts). If the game *crashes*, it should create a folder called `EquilinoxErrorLogs`
 in the mod directory, with an `ERROR_<numbers>.txt` file. Both of these files can help me diagnose an issue. 
 
-> [!WARNING]
-> The `APEqLog.log` file and the console window that opens when running the .bat file contain any server connection information you've inputted, including the password. I realize this isn't ideal, and I will change that in the future (it was useful during testing).
-
-If the issue relates to save file loading, I would benefit from seeing the save file for the world, which you can find in the `Equilinox_AP_Saves` folder. Note, this folder gets created in the main game directory, not in the mod's EquilinoxAP file.
-This means you can update the mod without losing existing save files (however, you should pay attention to any compatibility warnings on new releases).
+I could also benefit from seeing the save file for the world, which you can find in the `Equilinox_AP_Saves` folder. Note, this folder gets created in the main game directory, not in the mod's EquilinoxAP file.
+This means you can update the mod without losing existing save files (however, you should pay attention to any compatibility warnings on new releases). If your issue pertains to save file loading, then I will definitely want to see this file.
 
 <img width="80%" alt="image" src="https://github.com/user-attachments/assets/5263b10f-35b5-44f7-883c-97486a638ae1" />
 
