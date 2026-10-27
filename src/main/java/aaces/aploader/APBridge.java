@@ -67,7 +67,7 @@ import java.util.*;
 @SuppressWarnings("unchecked")
 public class APBridge {
 
-    private static final String modVersion = "0.1.2";
+    private static final String modVersion = "0.2.0";
 
     public static String host = "";
     public static String slot = "";
@@ -77,6 +77,7 @@ public class APBridge {
 
     public static boolean goaled = false;
     public static boolean serverKnowsWeGoaled = false;
+    private static List<String> evolvedSpecies = new ArrayList<>();
 
     private static ItemManager itemManager = null;
     private static LocationManager locationManager = null;
@@ -416,6 +417,11 @@ public class APBridge {
             writer.writeBoolean(goaled);
             if (goaled) writer.writeBoolean(serverKnowsWeGoaled);
 
+            writer.writeInt(evolvedSpecies.size());
+            for(String species : evolvedSpecies) {
+                writer.writeString(species);
+            }
+
             SlotData.saveSlotData(writer);
 
         } catch (IOException e) {
@@ -439,7 +445,6 @@ public class APBridge {
             String loadedModVersion = versionNumbers[0] + "." + versionNumbers[1] + "." + versionNumbers[2];
             boolean lastSavedOnLatestVersion = versionLastSavedOn == modVersionToLong();
 
-            // For client behavior that depends on the initial version (should try to get from the .apworld?)
             if(versionLastSavedOn >= 102) { // 0.1.2
                 modVersionAtGeneration = reader.readLong();
             } else {
@@ -461,8 +466,16 @@ public class APBridge {
             goaled = reader.readBoolean();
             if (goaled) serverKnowsWeGoaled = reader.readBoolean();
 
+            if (versionLastSavedOn >= 200) { // 0.2.0
+                evolvedSpecies.clear();
+                int evolvedSpeciesCount = reader.readInt();
+                for(int i = 0; i < evolvedSpeciesCount; i++){
+                    evolvedSpecies.add(reader.readString());
+                }
+            }
+
             if (versionLastSavedOn >= 102) { // 0.1.2
-                SlotData.loadSlotDataFromSave(reader);
+                SlotData.loadSlotDataFromSave(reader, versionLastSavedOn);
             } else {
                 SlotData.loadDefaults();
             }
@@ -680,6 +693,7 @@ public class APBridge {
         APAgent.log("Trying to generate a world: host: "+host+", slot: "+slot+", password: "+password.replaceAll(".","*"));
         itemManager = new ItemManager(0);
         locationManager = new LocationManager();
+        evolvedSpecies = new ArrayList<>();
         client = APClient.tryConnect(host, slot, password, itemManager, locationManager, true);
         return true;
     }
@@ -784,19 +798,25 @@ public class APBridge {
         String speciesName = speciesEvolved.getName();
         APAgent.log("Evolution occurred! Name: " + speciesName);
 
-        if(speciesName.equals("Camel")) {
-            if (SlotData.getGoalCondition() == GoalType.CAMEL) {
-                if (tryGoal()) {
-                    sendNotification("Goal Complete!", "You evolved a camel and therefore completed the goal!");
+        evolvedSpecies.add(speciesName);
+        trySendEvolutionCheck(speciesName);
+
+        if(SlotData.getGoalCondition() == GoalType.EVOLUTION) {
+            if(SlotData.evolvedEnoughSpeciesToGoal(evolvedSpecies)){
+                if(tryGoal()){
+                    sendNotification("Goal Complete!", "You've evolved enough of the required species to complete your goal.");
                 } else {
-                    sendNotification("Goal Completed, but not sent!", "You completed your goal, but we failed to tell the server. Save and exit, then reload and reconnect to try again.");
+                    sendNotification("Goal Complete; Failed to send", "You've completed your goal condition, we failed to tell the server. Will try again on reconnect.");
                 }
             } else {
-                trySendEvolutionCheck(speciesName);
+                if(SlotData.numAlreadyEvolvedSpeciesNeededForGoal(Collections.singletonList(speciesName)) == 1){
+                    int needed = SlotData.numNeededSpeciesForEvoGoal();
+                    int found = SlotData.numAlreadyEvolvedSpeciesNeededForGoal(evolvedSpecies);
+                    sendNotification(speciesName + " counts towards Evolution goal!", "Evolution goal progress: " + found + "/" + needed);
+                }
             }
-        } else {
-            trySendEvolutionCheck(speciesName);
         }
+
     }
 
 
@@ -823,7 +843,7 @@ public class APBridge {
         if(!saveLoaded) return;
 
         if(!SlotData.includeSizeChecks()) return;
-        if(SlotData.getGoalCondition() == GoalType.CAMEL && species.equals("Camel")) return;
+        if(SlotData.getGoalCondition() == GoalType.EVOLUTION && species.equals("Camel")) return;
 
         if (size >= 1.195){
             int locId = LocationManager.SpeciesAndSizeToSizeLocID.get(species + "1.20");
@@ -849,7 +869,7 @@ public class APBridge {
     /// Called on a successful connection to an Archipelago server to properly resync
     public static void onConnect(){
 
-        SlotData.setCachedOnConnect(client);
+        modVersionAtGeneration = SlotData.setCachedOnConnect(client);
 
         for(Task task : GameManager.getTaskManager().getTasks()){
             if (task.getState() == TaskState.COMPLETE) continue;
@@ -869,6 +889,12 @@ public class APBridge {
         if (goaled && !serverKnowsWeGoaled){
             APAgent.log("Previously goaled, but did not send. Sending now...");
             tryGoal();
+        }
+
+        if(SlotData.getGoalCondition() == GoalType.EVOLUTION){
+            APAgent.log("Evolved "
+                    + SlotData.numAlreadyEvolvedSpeciesNeededForGoal(evolvedSpecies) + " of the "
+                    + SlotData.numNeededSpeciesForEvoGoal() + " needed species to goal (out of " + SlotData.evoGoalSpecies.length +")");
         }
 
     }
@@ -918,14 +944,17 @@ public class APBridge {
 
 
     /// Converts the mod version X.Y.Z to the long XXYYZZ. Used for safer save file loading
-    private static long modVersionToLong(){
-        //TODO: Make this an int on the 0.2.0 update?
-        String[] exps = modVersion.split("\\.");
+    public static long modVersionToLong(String version){
+        String[] exps = version.split("\\.");
         return 10000L * Integer.parseInt(exps[0]) + 100L * Integer.parseInt(exps[1]) + Integer.parseInt(exps[2]);
     }
 
+    private static long modVersionToLong(){
+        return modVersionToLong(modVersion);
+    }
 
-    /// Used to undo {@link modVersionToLong}
+
+    /// Used to undo {@link modVersionToLong()}
     public static int[] getVersionFromLong(long number) {
         String numberAsString = String.valueOf(number);
         int major = 0;

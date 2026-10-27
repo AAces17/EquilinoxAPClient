@@ -2,6 +2,6 @@ package aaces.aploader.client;
 
 public enum GoalType{
     COMPLETIONIST,
-    CAMEL,
+    EVOLUTION,
     NONE
 }
