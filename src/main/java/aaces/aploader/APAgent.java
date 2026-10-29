@@ -13,6 +13,10 @@ public class APAgent {
     private static PrintWriter log;
 
     private static final ClassFileTransformer[] transformers = {
+            new MainAppTransformer(),
+            new SessionTransformer(),
+            new SessionManagerTransformer(),
+            new SavesTransformer(),
             new GameManagerTransformer(),
             new MenuPanelGUITransformer(),
             new GameMenuGuiTransformer(),
@@ -20,16 +24,12 @@ public class APAgent {
             new TaskInfoFrameUiTransformer(),
             new MyKeyboardTransformer(),
             new UnlockGuideUiTransformer(),
-            new SessionTransformer(),
-            new SessionManagerTransformer(),
-            new SavesTransformer(),
             //new BinaryReaderTransformer(), // Used for debugging save file loading
             new EvolveProgressUiTransformer(),
             new EvolveProgressUi2Transformer(),
             new ChildStateSubClassTransformer(),
             new ToolbarTransformer(),
             new TextureManagerTransformer(),
-            new MainAppTransformer()
     };
 
     public static void premain(
