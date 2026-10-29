@@ -8,6 +8,7 @@ import java.util.Map;
 
 public class ItemManager {
     private int index;
+    private int receivedDpPerMinBonuses;
 
 //region Item ID Maps
 
@@ -200,8 +201,9 @@ public class ItemManager {
 
 //endregion
 
-    public ItemManager(int index){
+    public ItemManager(int index, int receivedDpPerMinBonuses){
         this.index = index;
+        this.receivedDpPerMinBonuses = receivedDpPerMinBonuses;
     }
 
     public int getIndex(){
@@ -210,6 +212,10 @@ public class ItemManager {
 
     public void setIndex(int index){
         this.index = index;
+    }
+
+    public int getReceivedDpPerMinBonuses(){
+        return this.receivedDpPerMinBonuses;
     }
 
     public boolean processReceivedItem(long itemId, int index, String sendingPlayer){
@@ -236,6 +242,11 @@ public class ItemManager {
                 if(index > this.index) APBridge.sendNotification(
                         species + " Unlocked!",
                         "Received " + species + " Permit from " + sendingPlayer);
+                break;
+            case 7: // DP/Min Bonus Items
+                if (index <= this.index) return false; // Don't give these again on startup
+                this.receivedDpPerMinBonuses++;
+                APBridge.sendNotification("Received Bonus DP/Min!", "Received Progressive DP/Min bonus from " + sendingPlayer + ". Total bonus: +"+this.receivedDpPerMinBonuses*20+" dp/min");
                 break;
             case 8: // Money (dp) items
                 if (index <= this.index) return false; // Don't give money again on startup

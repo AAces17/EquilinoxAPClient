@@ -35,7 +35,7 @@ public class ArchipelagoToolbarGui extends GuiComponent {
         if (itemManager != null) {
             this.itemManager = itemManager;
         } else {
-            this.itemManager = new ItemManager(0);
+            this.itemManager = new ItemManager(0, 0);
         }
         if (locationManager != null) {
             this.locationManager = locationManager;

@@ -38,6 +38,7 @@ import saves.Saves;
 import session.GameMode;
 import session.Session;
 import session.SessionManager;
+import sessionStats.Stats;
 import shopping.BlueprintShopItem;
 import shops.ShopItem;
 import taskUi.TaskInfoFrameUi;
@@ -78,6 +79,8 @@ public class APBridge {
     public static boolean goaled = false;
     public static boolean serverKnowsWeGoaled = false;
     private static List<String> evolvedSpecies = new ArrayList<>();
+
+    private static final int dpPerMinGivenByEachBonus = 20;
 
     private static ItemManager itemManager = null;
     private static LocationManager locationManager = null;
@@ -401,7 +404,9 @@ public class APBridge {
 
             if(itemManager != null) {
                 writer.writeInt(itemManager.getIndex());
+                writer.writeInt(itemManager.getReceivedDpPerMinBonuses());
             } else {
+                writer.writeInt(0);
                 writer.writeInt(0);
             }
 
@@ -455,7 +460,15 @@ public class APBridge {
             slot = reader.readString();
             password = reader.readString();
 
-            itemManager = new ItemManager(reader.readInt());
+            int itemIndex = reader.readInt();
+
+            int receivedDpPerMinBonuses = 0;
+
+            if (versionLastSavedOn >= 200) { // 0.2.0
+                receivedDpPerMinBonuses = reader.readInt();
+            }
+
+            itemManager = new ItemManager(itemIndex, receivedDpPerMinBonuses);
 
             int numQueuedLocs = reader.readInt();
             locationManager = new LocationManager();
@@ -487,7 +500,7 @@ public class APBridge {
             APAgent.log("\t"+e.getMessage());
             e.printStackTrace();
 
-            itemManager = new ItemManager(0);
+            itemManager = new ItemManager(0, 0);
             locationManager = new LocationManager();
             goaled = false;
             serverKnowsWeGoaled = false;
@@ -643,6 +656,28 @@ public class APBridge {
     }
 
 
+    /// Called by Stats.update() to increase the DP based on DP/Min. Used to account for the
+    /// bonus dp/min items. Doesn't actually touch the game's internal tracking of the current dp/min
+    /// from animals, just intercepts the call to read the current dp/min.
+    ///
+    /// @return The existing dp/min + dp/min from bonus items, scaled appropriately
+    public static int getDpChange(Stats stats){
+        int dpIncreaseItems = saveLoaded ? itemManager.getReceivedDpPerMinBonuses() : 0;
+        return (int) ((float)(stats.getDpPerMinute() + dpIncreaseItems * dpPerMinGivenByEachBonus) * 0.18333334F);
+    }
+
+
+    /// Called by Stats.update() to update the displayed dp/min counter to account for the
+    /// bonus dp/min items. I don't actually know how the game typically updates this display (I know the
+    /// function that does it, but not what calls that function). Since this is purely visual and is called
+    /// every tick, it shouldn't cause any issues.
+    public static void updateDpPerMinCounter(){
+        int dpIncreaseItems = saveLoaded ? itemManager.getReceivedDpPerMinBonuses() : 0;
+        EquilinoxGuis.getToolBar().getDppmCounter().setCount(GameManager.getSession().getStats().getDpPerMinute() + dpIncreaseItems * dpPerMinGivenByEachBonus);
+
+    }
+
+
 
 
     // -------------------------------------------------
@@ -691,7 +726,7 @@ public class APBridge {
         slot = s;
         password = p;
         APAgent.log("Trying to generate a world: host: "+host+", slot: "+slot+", password: "+password.replaceAll(".","*"));
-        itemManager = new ItemManager(0);
+        itemManager = new ItemManager(0, 0);
         locationManager = new LocationManager();
         evolvedSpecies = new ArrayList<>();
         client = APClient.tryConnect(host, slot, password, itemManager, locationManager, true);

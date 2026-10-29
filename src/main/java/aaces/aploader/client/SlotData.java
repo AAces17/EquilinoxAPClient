@@ -15,6 +15,7 @@ public class SlotData {
     public int tasks_reward_dp;
     public int starting_dp;
     public int itempool_dp;
+    public int dp_per_min_bonus_count;
 
     public int goal_selection;
     public String[] evo_goal_species;
@@ -90,6 +91,8 @@ public class SlotData {
             writer.writeInt(itempoolDP);
             writer.writeInt(goalCondition);
 
+            writer.writeInt(dpPerMinBonusCount);
+
             if (goalCondition == 1){
                 writer.writeInt(evoGoalCount);
                 writer.writeInt(evoGoalSpecies.length);
@@ -113,6 +116,12 @@ public class SlotData {
             startingDP = reader.readInt();
             itempoolDP = reader.readInt();
             goalCondition = reader.readInt();
+
+            if (versionLastSavedOn >= 200) { // 0.2.0
+                dpPerMinBonusCount = reader.readInt();
+            } else {
+                dpPerMinBonusCount = 0;
+            }
 
             if(goalCondition == 1){
                 if(versionLastSavedOn >= 200) { // 0.2.0
@@ -143,6 +152,7 @@ public class SlotData {
         itempoolDP = 150000;
         goalCondition = 0; // might eventually change to not accidentally miss a goal
 
+        dpPerMinBonusCount = 0;
         evoGoalCount = 1;
         evoGoalSpecies = new String[]{"Camel"};
     }
@@ -163,6 +173,8 @@ public class SlotData {
         APAgent.log("Connected to world generated on version " + apworldVersionString + " ("+apworldVersion+")");
 
         if (apworldVersion >= 200) {
+            dpPerMinBonusCount = client.slotData.dp_per_min_bonus_count;
+
             evoGoalCount = client.slotData.evo_goal_count;
 
             APAgent.log("Evo goal count: " + evoGoalCount);
