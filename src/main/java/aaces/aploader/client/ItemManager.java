@@ -9,6 +9,7 @@ import java.util.Map;
 public class ItemManager {
     private int index;
     private int receivedDpPerMinBonuses;
+    private int totalDpReceived;
 
 //region Item ID Maps
 
@@ -201,9 +202,10 @@ public class ItemManager {
 
 //endregion
 
-    public ItemManager(int index, int receivedDpPerMinBonuses){
+    public ItemManager(int index, int receivedDpPerMinBonuses, int totalDpReceived){
         this.index = index;
         this.receivedDpPerMinBonuses = receivedDpPerMinBonuses;
+        this.totalDpReceived = totalDpReceived;
     }
 
     public int getIndex(){
@@ -216,6 +218,10 @@ public class ItemManager {
 
     public int getReceivedDpPerMinBonuses(){
         return this.receivedDpPerMinBonuses;
+    }
+
+    public int getTotalDpReceived(){
+        return this.totalDpReceived;
     }
 
     public boolean processReceivedItem(long itemId, int index, String sendingPlayer){
@@ -241,18 +247,25 @@ public class ItemManager {
                 // Only send the in game notification if this is actually a new item, though
                 if(index > this.index) APBridge.sendNotification(
                         species + " Unlocked!",
-                        "Received " + species + " Permit from " + sendingPlayer);
+                        "Received " + species + " Permit from " + sendingPlayer
+                );
                 break;
             case 7: // DP/Min Bonus Items
                 if (index <= this.index) return false; // Don't give these again on startup
                 this.receivedDpPerMinBonuses++;
-                APBridge.sendNotification("Received Bonus DP/Min!", "Received Progressive DP/Min bonus from " + sendingPlayer + ". Total bonus: +"+this.receivedDpPerMinBonuses*20+" dp/min");
+                APBridge.sendNotification("Received Bonus DP/Min!",
+                        "Received Progressive DP/Min bonus from " + sendingPlayer +
+                                ". Total bonus: +" + this.receivedDpPerMinBonuses*APBridge.dpPerMinGivenByEachBonus + " dp/min"
+                );
                 break;
             case 8: // Money (dp) items
                 if (index <= this.index) return false; // Don't give money again on startup
                 int amount = (int) (itemId - 80000) * 100; // eg, id 80750 <=> 75,000 dp
+                this.totalDpReceived += amount;
                 APBridge.giveMoney(amount);
-                APBridge.sendNotification("Received " + amount + " dp!", "Received " + amount + " dp from " + sendingPlayer);
+                APBridge.sendNotification("Received " + amount + " dp!",
+                        "Received " + amount + " dp from " + sendingPlayer
+                );
                 break;
             case 9: // Filler
                 APAgent.log("Received blank filler item; this shouldn't happen");

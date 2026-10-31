@@ -80,7 +80,7 @@ public class APBridge {
     public static boolean serverKnowsWeGoaled = false;
     private static List<String> evolvedSpecies = new ArrayList<>();
 
-    private static final int dpPerMinGivenByEachBonus = 20;
+    public static final int dpPerMinGivenByEachBonus = 20;
 
     private static ItemManager itemManager = null;
     private static LocationManager locationManager = null;
@@ -405,7 +405,9 @@ public class APBridge {
             if(itemManager != null) {
                 writer.writeInt(itemManager.getIndex());
                 writer.writeInt(itemManager.getReceivedDpPerMinBonuses());
+                writer.writeInt(itemManager.getTotalDpReceived());
             } else {
+                writer.writeInt(0);
                 writer.writeInt(0);
                 writer.writeInt(0);
             }
@@ -463,12 +465,14 @@ public class APBridge {
             int itemIndex = reader.readInt();
 
             int receivedDpPerMinBonuses = 0;
+            int totalDpReceived = 0;
 
             if (versionLastSavedOn >= 200) { // 0.2.0
                 receivedDpPerMinBonuses = reader.readInt();
+                totalDpReceived = reader.readInt();
             }
 
-            itemManager = new ItemManager(itemIndex, receivedDpPerMinBonuses);
+            itemManager = new ItemManager(itemIndex, receivedDpPerMinBonuses, totalDpReceived);
 
             int numQueuedLocs = reader.readInt();
             locationManager = new LocationManager();
@@ -500,7 +504,7 @@ public class APBridge {
             APAgent.log("\t"+e.getMessage());
             e.printStackTrace();
 
-            itemManager = new ItemManager(0, 0);
+            itemManager = new ItemManager(0, 0, 0);
             locationManager = new LocationManager();
             goaled = false;
             serverKnowsWeGoaled = false;
@@ -726,7 +730,7 @@ public class APBridge {
         slot = s;
         password = p;
         APAgent.log("Trying to generate a world: host: "+host+", slot: "+slot+", password: "+password.replaceAll(".","*"));
-        itemManager = new ItemManager(0, 0);
+        itemManager = new ItemManager(0, 0, 0);
         locationManager = new LocationManager();
         evolvedSpecies = new ArrayList<>();
         client = APClient.tryConnect(host, slot, password, itemManager, locationManager, true);
@@ -1006,6 +1010,15 @@ public class APBridge {
         int bugs = Integer.parseInt(numberAsString.substring(numberAsString.length() - 2));
 
         return new int[]{major, minor, bugs};
+    }
+
+
+    public static List<String> getEvolvedSpeciesThatCountTowardsEvoGoal() {
+        List<String> speciesList = new ArrayList<>();
+        for (String species : evolvedSpecies){
+            if (Arrays.asList(SlotData.evoGoalSpecies).contains(species)) speciesList.add(species);
+        }
+        return speciesList;
     }
 
 

@@ -3,7 +3,9 @@ package aaces.aploader;
 import aaces.aploader.client.APClient;
 import aaces.aploader.client.ItemManager;
 import aaces.aploader.client.LocationManager;
+import aaces.aploader.client.SlotData;
 import fontRendering.Text;
+import gameManaging.GameManager;
 import guiRendering.GuiRenderData;
 import guis.GuiComponent;
 import mainGuis.ColourPalette;
@@ -14,6 +16,7 @@ import userInterfaces.TextButtonUi;
 import userInterfaces.TextFieldGui;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
 public class ArchipelagoToolbarGui extends GuiComponent {
 
@@ -35,7 +38,7 @@ public class ArchipelagoToolbarGui extends GuiComponent {
         if (itemManager != null) {
             this.itemManager = itemManager;
         } else {
-            this.itemManager = new ItemManager(0, 0);
+            this.itemManager = new ItemManager(0, 0, 0);
         }
         if (locationManager != null) {
             this.locationManager = locationManager;
@@ -46,6 +49,7 @@ public class ArchipelagoToolbarGui extends GuiComponent {
 
     protected void init(){
         super.init();
+        addInfoFields();
         addInputFields();
         addConnectButton();
     }
@@ -54,13 +58,77 @@ public class ArchipelagoToolbarGui extends GuiComponent {
         float offset = super.pixelsToRelativeX(40.0F);
         float width = super.pixelsToRelativeX(300.0F);
 
-        addLabel(0.907F - (width + offset), super.pixelsToRelativeY(10.0F), "Host");
-        addLabel(0.915F - (width + offset), super.pixelsToRelativeY(50.0F), "Slot");
-        addLabel(0.85F - (width + offset), super.pixelsToRelativeY(90.0F), "Password");
+        addLabel(0.907F - (width + offset), super.pixelsToRelativeY(10.0F), "Host:");
+        addLabel(0.915F - (width + offset), super.pixelsToRelativeY(50.0F), "Slot:");
+        addLabel(0.85F - (width + offset), super.pixelsToRelativeY(90.0F), "Password:");
 
-        this.hostField = addTextField(1.0F - (width + offset), super.pixelsToRelativeY(10.0F), host.isEmpty() ? "archipelago.gg:xxxxx" : host);
-        this.slotField = addTextField(1.0F - (width + offset), super.pixelsToRelativeY(50.0F), slot.isEmpty() ? "Player1" : slot);
-        this.passwordField = addTextField(1.0F - (width + offset), super.pixelsToRelativeY(90.0F), password);
+        this.hostField = addTextField(1.0F - (width + offset), super.pixelsToRelativeY(10.0F),
+                host.isEmpty() ? "archipelago.gg:xxxxx" : host);
+        this.slotField = addTextField(1.0F - (width + offset), super.pixelsToRelativeY(50.0F),
+                slot.isEmpty() ? "Player1" : slot);
+        this.passwordField = addTextField(1.0F - (width + offset), super.pixelsToRelativeY(90.0F),
+                password);
+    }
+
+    private void addInfoFields(){
+        float offset = super.pixelsToRelativeX(40.0F);
+        float width = super.pixelsToRelativeX(300.0F);
+
+        boolean connected = APClient.Connected();
+
+        addLabel(1.0F - (width + offset), super.pixelsToRelativeY(220.0F),
+                "Connection Status: " + (connected ? "Connected" : (APClient.Connecting ? "Connecting" : "Disconnected")));
+        addLabel(0.6F - (width + offset), super.pixelsToRelativeY(280.0F),
+                "DP Received As Items: " + this.itemManager.getTotalDpReceived());
+        int dpPerMinBonuses = this.itemManager.getReceivedDpPerMinBonuses();
+        addLabel(0.6F - (width + offset), super.pixelsToRelativeY(310.0F),
+                "DP/Min Bonus Items Received: " + dpPerMinBonuses + " (+"+dpPerMinBonuses*APBridge.dpPerMinGivenByEachBonus+" dp/min)");
+
+        if (APBridge.saveLoaded) {
+            switch(SlotData.getGoalCondition()){
+                case COMPLETIONIST:
+                    int tasksCompleted = GameManager.getTaskManager().getCompletedTaskCount();
+                    addLabel(0.6F - (width + offset), super.pixelsToRelativeY(370.0F),
+                            "Goal Condition: Complete All Tasks");
+                    addLabel(0.6F - (width + offset), super.pixelsToRelativeY(400.0F),
+                            "    Tasks Completed: " + tasksCompleted + "/60.");
+                    break;
+                case EVOLUTION:
+                    int numRequired = SlotData.numNeededSpeciesForEvoGoal();
+                    String[] speciesList = SlotData.evoGoalSpecies;
+
+                    StringBuilder speciesNeededString = new StringBuilder();
+                    for (String species : speciesList){
+                        speciesNeededString.append(species).append(", ");
+                    }
+                    speciesNeededString.delete(speciesNeededString.length() - 2, speciesNeededString.length());
+
+                    List<String> progress = APBridge.getEvolvedSpeciesThatCountTowardsEvoGoal();
+
+                    StringBuilder progressString = new StringBuilder();
+                    if(!progress.isEmpty()) {
+                        for (String species : progress) {
+                            progressString.append(species).append(", ");
+                        }
+                        progressString.delete(progressString.length() - 2, progressString.length());
+                    } else {
+                        progressString.append("None");
+                    }
+
+                    addLabel(0.6F - (width + offset), super.pixelsToRelativeY(370.0F),
+                            "Goal Condition: Evolve "+(numRequired == speciesList.length ? "all" : numRequired) +
+                                    " of the following " + speciesList.length + " species:");
+                    addLabel(0.6F - (width + offset), super.pixelsToRelativeY(400.0F),
+                            "    " + speciesNeededString);
+                    addLabel(0.6F - (width + offset), super.pixelsToRelativeY(440.0F),
+                            "Already evolved " + progress.size() + " of the required species:");
+                    addLabel(0.6F - (width + offset), super.pixelsToRelativeY(470.0F),
+                            "    " + progressString);
+                    break;
+                default:
+                    break;
+            }
+        }
     }
 
     private void addConnectButton(){
@@ -71,7 +139,8 @@ public class ArchipelagoToolbarGui extends GuiComponent {
             if (event.isLeftClick()){
                 APAgent.log("Toolbar Connect button pressed");
                 if(!APBridge.saveLoaded) {
-                    APBridge.sendNotification("Can't Connect This Way", "To connect, load an existing AP save or use the 'New World' button.");
+                    APBridge.sendNotification("Can't Connect This Way",
+                            "To connect, load an existing AP save or use the 'New World' button.");
                     APAgent.log("No save loaded yet");
                     return;
                 }
@@ -106,7 +175,7 @@ public class ArchipelagoToolbarGui extends GuiComponent {
     }
 
     private void addLabel(float xPos, float yPos, String name) {
-        Text text = Text.newText(name + ":").setFontSize(0.75F).create();
+        Text text = Text.newText(name).setFontSize(0.75F).create();
         text.setColour(ColourPalette.WHITE);
         super.addText(text, xPos, yPos, 1.0F);
     }
