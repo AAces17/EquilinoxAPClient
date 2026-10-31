@@ -167,7 +167,9 @@ public class SlotData {
         goalCondition = client.slotData.goal_selection;
 
         String apworldVersionString = client.slotData.ap_world_version;
-
+        if (apworldVersionString == null) {
+            apworldVersionString = "0.1.2";
+        }
         long apworldVersion = APBridge.modVersionToLong(apworldVersionString);
 
         APAgent.log("Connected to world generated on version " + apworldVersionString + " ("+apworldVersion+")");
@@ -180,6 +182,10 @@ public class SlotData {
             APAgent.log("Evo goal count: " + evoGoalCount);
 
             evoGoalSpecies = client.slotData.evo_goal_species;
+        } else {
+            dpPerMinBonusCount = client.slotData.dp_per_min_bonus_count;
+            evoGoalCount = 1;
+            evoGoalSpecies = new String[]{"Camel"};
         }
 
         return apworldVersion;
