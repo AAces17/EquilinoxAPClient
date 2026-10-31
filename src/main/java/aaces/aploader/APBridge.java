@@ -4,6 +4,7 @@ import aaces.aploader.client.*;
 import audio.SoundMaestro;
 import basics.DisplayManager;
 import blueprints.Blueprint;
+import bottomBar.SpeedUi;
 import breedingTraits.FloatTrait;
 import breedingTraits.Trait;
 import componentArchitecture.ComponentType;
@@ -679,6 +680,13 @@ public class APBridge {
         int dpIncreaseItems = saveLoaded ? itemManager.getReceivedDpPerMinBonuses() : 0;
         EquilinoxGuis.getToolBar().getDppmCounter().setCount(GameManager.getSession().getStats().getDpPerMinute() + dpIncreaseItems * dpPerMinGivenByEachBonus);
 
+    }
+
+
+    /// Replaces the game's fast-forward button with our visually-identical fast-forward toggle button
+    /// @param speedUi the ui wrapper that creates the button
+    public static void addSpeedToggleButton(SpeedUi speedUi){
+        speedUi.addComponent(new SpeedToggleButtonUi(), 0.15F, 0.15F, 0.7F, 0.7F);
     }
 
 

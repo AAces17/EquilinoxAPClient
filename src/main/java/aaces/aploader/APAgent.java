@@ -30,7 +30,8 @@ public class APAgent {
             new ChildStateSubClassTransformer(),
             new ToolbarTransformer(),
             new TextureManagerTransformer(),
-            new StatsTransformer()
+            new StatsTransformer(),
+            new SpeedUiTransformer()
     };
 
     public static void premain(
