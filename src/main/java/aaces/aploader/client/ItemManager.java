@@ -255,7 +255,7 @@ public class ItemManager {
                 this.receivedDpPerMinBonuses++;
                 APBridge.sendNotification("Received Bonus DP/Min!",
                         "Received Progressive DP/Min bonus from " + sendingPlayer +
-                                ". Total bonus: +" + this.receivedDpPerMinBonuses*APBridge.dpPerMinGivenByEachBonus + " dp/min"
+                                ". Total bonus: +" + APBridge.dpPerMinBonus(this.receivedDpPerMinBonuses) + " dp/min"
                 );
                 break;
             case 8: // Money (dp) items

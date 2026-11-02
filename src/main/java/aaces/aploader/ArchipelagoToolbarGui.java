@@ -82,7 +82,7 @@ public class ArchipelagoToolbarGui extends GuiComponent {
                 "DP Received As Items: " + this.itemManager.getTotalDpReceived());
         int dpPerMinBonuses = this.itemManager.getReceivedDpPerMinBonuses();
         addLabel(0.6F - (width + offset), super.pixelsToRelativeY(310.0F),
-                "DP/Min Bonus Items Received: " + dpPerMinBonuses + " (+"+dpPerMinBonuses*APBridge.dpPerMinGivenByEachBonus+" dp/min)");
+                "DP/Min Bonus Items Received: " + dpPerMinBonuses + " (+"+APBridge.dpPerMinBonus(dpPerMinBonuses)+" dp/min)");
 
         if (APBridge.saveLoaded) {
             switch(SlotData.getGoalCondition()){

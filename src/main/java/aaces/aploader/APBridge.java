@@ -81,8 +81,6 @@ public class APBridge {
     public static boolean serverKnowsWeGoaled = false;
     private static List<String> evolvedSpecies = new ArrayList<>();
 
-    public static final int dpPerMinGivenByEachBonus = 20;
-
     private static ItemManager itemManager = null;
     private static LocationManager locationManager = null;
     private static APClient client;
@@ -668,7 +666,7 @@ public class APBridge {
     /// @return The existing dp/min + dp/min from bonus items, scaled appropriately
     public static int getDpChange(Stats stats){
         int dpIncreaseItems = saveLoaded ? itemManager.getReceivedDpPerMinBonuses() : 0;
-        return (int) ((float)(stats.getDpPerMinute() + dpIncreaseItems * dpPerMinGivenByEachBonus) * 0.18333334F);
+        return (int) ((float)(stats.getDpPerMinute() + dpPerMinBonus(dpIncreaseItems)) * 0.18333334F);
     }
 
 
@@ -678,7 +676,7 @@ public class APBridge {
     /// every tick, it shouldn't cause any issues.
     public static void updateDpPerMinCounter(){
         int dpIncreaseItems = saveLoaded ? itemManager.getReceivedDpPerMinBonuses() : 0;
-        EquilinoxGuis.getToolBar().getDppmCounter().setCount(GameManager.getSession().getStats().getDpPerMinute() + dpIncreaseItems * dpPerMinGivenByEachBonus);
+        EquilinoxGuis.getToolBar().getDppmCounter().setCount(GameManager.getSession().getStats().getDpPerMinute() + dpPerMinBonus(dpIncreaseItems));
 
     }
 
@@ -1027,6 +1025,12 @@ public class APBridge {
             if (Arrays.asList(SlotData.evoGoalSpecies).contains(species)) speciesList.add(species);
         }
         return speciesList;
+    }
+
+
+    public static int dpPerMinBonus(int bonusItemsReceived){
+        int n = bonusItemsReceived;
+        return n == 0 ? 0 : 5 * (n*n + n + 2);
     }
 
 
