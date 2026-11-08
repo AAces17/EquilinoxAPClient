@@ -31,7 +31,8 @@ public class APAgent {
             new ToolbarTransformer(),
             new TextureManagerTransformer(),
             new StatsTransformer(),
-            new SpeedUiTransformer()
+            new SpeedUiTransformer(),
+            new ShopItemGuiTransformer()
     };
 
     public static void premain(

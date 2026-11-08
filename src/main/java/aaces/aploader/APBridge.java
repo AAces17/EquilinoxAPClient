@@ -41,6 +41,7 @@ import session.Session;
 import session.SessionManager;
 import sessionStats.Stats;
 import shopping.BlueprintShopItem;
+import shops.LockedRequirementUi;
 import shops.ShopItem;
 import taskUi.TaskInfoFrameUi;
 import tasks.*;
@@ -685,6 +686,18 @@ public class APBridge {
     /// @param speedUi the ui wrapper that creates the button
     public static void addSpeedToggleButton(SpeedUi speedUi){
         speedUi.addComponent(new SpeedToggleButtonUi(), 0.15F, 0.15F, 0.7F, 0.7F);
+    }
+
+
+    /// Replaces the pop-up mouseover ui for locked shop items to mention base species permits, not linked tasks
+    /// @param item the shop item
+    /// @return the gui element to display
+    public static GuiComponent getLockedShopItemMouseover(ShopItem item){
+        if(item.hasLinkedTask()){
+            return new LockedRequirementUi("Find in the multiworld", item.getName() + " Permit");
+        } else {
+            return item.getLockedMouseover();
+        }
     }
 
 
