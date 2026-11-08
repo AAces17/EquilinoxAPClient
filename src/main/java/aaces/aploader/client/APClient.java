@@ -48,6 +48,7 @@ public class APClient extends Client {
             }
         }
         APAgent.log("Trying to connect with host: "+host+", slot: "+slot+", password: "+password.replaceAll(".","*"));
+        APBridge.sendNotification("Trying to Connect", "Connecting to " + host + " as " + slot);
         client = new APClient(slot, password, itemManager, locationManager);
         lastHostAttempt = host;
         try {

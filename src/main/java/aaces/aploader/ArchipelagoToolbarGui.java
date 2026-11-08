@@ -145,7 +145,7 @@ public class ArchipelagoToolbarGui extends GuiComponent {
                     return;
                 }
                 if(APClient.Connecting){
-                    APBridge.sendNotification("Already Trying to Connect", "Please wait");
+                    APBridge.sendNotification("Already Trying to Connect", "Please wait...");
                     APAgent.log("Already trying to connect");
                     return;
                 }
