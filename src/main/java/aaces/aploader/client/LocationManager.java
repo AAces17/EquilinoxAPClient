@@ -519,7 +519,8 @@ public class LocationManager {
         }
     }
 
-    public void unlockAlreadyEvolvedSpecies(){
+    public List<String> unlockAlreadyEvolvedSpecies(){
+        List<String> evolvedSpecies = new ArrayList<>();
         for (int locId : checkedLocs){
             if (SpeciesEvolutionToLocID.containsValue(locId)){
                 String species = "";
@@ -529,10 +530,12 @@ public class LocationManager {
                         break;
                     }
                 }
+                evolvedSpecies.add(species);
                 int shopIdOfSpecies = ItemManager.SpeciesNameToShopItemID.get(species);
                 APBridge.unlockShopItem(shopIdOfSpecies);
             }
         }
+        return evolvedSpecies;
     }
 
 }

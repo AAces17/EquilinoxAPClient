@@ -677,7 +677,9 @@ public class APBridge {
     /// every tick, it shouldn't cause any issues.
     public static void updateDpPerMinCounter(){
         int dpIncreaseItems = saveLoaded ? itemManager.getReceivedDpPerMinBonuses() : 0;
-        EquilinoxGuis.getToolBar().getDppmCounter().setCount(GameManager.getSession().getStats().getDpPerMinute() + dpPerMinBonus(dpIncreaseItems));
+        EquilinoxGuis.getToolBar().getDppmCounter().setCount(
+                GameManager.getSession().getStats().getDpPerMinute() + dpPerMinBonus(dpIncreaseItems)
+        );
 
     }
 
@@ -934,13 +936,17 @@ public class APBridge {
             task.unlock();
         }
 
-        lockShops();
-        setCheckedLocs(client.getLocationManager().getCheckedLocations());
-        locationManager.unlockAlreadyEvolvedSpecies();
-
         if (!tryFlushLocationQueue(false)){
             APAgent.log("Failed to flush the location queue on connection");
         }
+
+        lockShops();
+        setCheckedLocs(client.getLocationManager().getCheckedLocations());
+
+        Set<String> union = new HashSet<>(evolvedSpecies);
+        union.addAll(locationManager.unlockAlreadyEvolvedSpecies());
+
+        evolvedSpecies = new ArrayList<>(union);
 
         APAgent.log("Goal condition: " + SlotData.getGoalCondition());
 
