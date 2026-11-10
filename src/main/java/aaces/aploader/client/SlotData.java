@@ -183,15 +183,11 @@ public class SlotData {
 
             evoGoalSpecies = client.slotData.evo_goal_species;
         } else {
-            dpPerMinBonusCount = client.slotData.dp_per_min_bonus_count;
+            dpPerMinBonusCount = 0;
             evoGoalCount = 1;
             evoGoalSpecies = new String[]{"Camel"};
         }
 
         return apworldVersion;
     }
-
-
 }
-
-

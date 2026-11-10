@@ -1049,7 +1049,7 @@ public class APBridge {
 
     public static int dpPerMinBonus(int bonusItemsReceived){
         int n = bonusItemsReceived;
-        return n == 0 ? 0 : 5 * (n*n + n + 2);
+        return 15 * n * (n + 1);
     }
 
 
