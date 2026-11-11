@@ -120,9 +120,11 @@ If the server port changes, or if you made a typo when creating the save file an
 > [!CAUTION]
 > The menu that opens when you click this button will display the server password in plain text, as does the new world generation menu. I plan to address this in a future update.
 
-You can then update the connection info and click "Connect". Eventually, I plan on adding info about completion progress and connection status to this menu.
+You can then update the connection info and click "Connect". You can also view the connection status and goal progress in this menu. 
+Note that this information does not update in real-time; you need to close and open the menu again to refresh it.
 
-<img width="75%" alt="image" src="https://github.com/user-attachments/assets/4086b344-7664-4d98-ab4e-e2e26882910d" />
+<img width="75%" alt="toolbar menu" src="https://github.com/user-attachments/assets/09a92e79-831b-4f47-a2af-3cb522e9e43c" />
+
 
 
 ## Updating the Mod
@@ -139,10 +141,22 @@ Currently, there are two possible goal conditions:
 
 | Option      | Description |
 | ----------- | ----------- |
-| `evolve_camel` | Evolve a Camel |
-| `completionist` | Complete every task |
+| `evolve_species` | Evolve a set number of species from a list |
+| `completionist` | Complete every task (default) |
 
 Recommendations for additional goal conditions are welcome.
+
+### `evo_goal_species`:
+Default: `['Camel', 'Giant Cactus']`.
+
+Does nothing if Goal Condition is not 'Evolve Species' (`evolve_species`). The set of species from which you will need to evolve X to goal, where X is given by 'Evolution Goal Count' (`evo_goal_count`).
+
+### `evo_goal_count`:
+Default: `0`.
+Range: `0` - `107`.
+
+Does nothing if Goal Condition is not 'Evolve Species' (`evolve_species`). Sets how many of the species selected in 'Evolution Goal Species Requirements' (`evo_goal_species`) you need to evolve 
+to complete the goal. Setting this to 0 or to a number greater than the number of selected species means you will need to evolve *all* of the selected species to complete the goal.
 
 ### `free_evolution`:
 Default: `true`.
@@ -157,20 +171,27 @@ filler DP items are replaced with larger DP items.
 
 ### `starting_dp`:
 Default: `5000`.
-Range: `2500` - `100000`.
+Range: `2500` - `500000`.
 
 The vanilla default starting amount is 2,500 DP. The actual starting DP value will be close to the value of this setting, but not exact.
 
 ### `itempool_dp`:
-Default: `150000`.
-Range: `0` - `500000`.
+Default: `200000`.
+Range: `0` - `1000000`.
 
 Can be used to add additional large DP items to the item pool. As with `starting_dp`, the actual value of the added DP items will be close to this, but not exact.
+
+### `dp_per_min_bonus_count`:
+Default: `10`.
+Range: `0` - `40`.
+
+Adds this many 'Progressive DP/Min Bonus' items to the pool. Each one of these received gives an increasing amount of additional dp/min (see the <a href="#items">Items Section</a> below for more information). 
+If set to 0, at least one animal permit will almost certainly be in an early sphere (though this is still likely even if this option is nonzero).
 
 ### `size_checks`:
 Default: `true`.
 
-Include checks for breeding species of size 1.10 and size 1.20. Adds 288 checks (or 286 if `evolve_camel` is the goal).
+Include checks for breeding species of size 1.10 and size 1.20. Adds 288 checks.
 
 ## Goal / Check / Item Information
 
@@ -187,14 +208,14 @@ Currently, there are two types of checks that are always included:
     Task Checks - each task sends a check upon completion (60 checks, or 59 if "Completionist" is the goal)
   </li>
   <li>
-    Evolution Checks - evolving a species for the first time sends a check (107 checks, or 106 if "Camel" is the goal)
+    Evolution Checks - evolving a species for the first time sends a check (107 checks)
   </li>
 </ul>
 
 In the yaml, you have the option to turn on additional checks:
 
 <ul>
-  <li>Size Checks - breeding a species of size 1.10 is a check, and breeding a species of size 1.20 is a check, for each species (288 checks, or 286 if "Camel" is the goal)</li>
+  <li>Size Checks - breeding a species of size 1.10 is a check, and breeding a species of size 1.20 is a check, for each species (288 checks)</li>
 </ul>
 
 Additional optional checks planned but not yet implemented: 
@@ -207,8 +228,30 @@ Additional optional checks planned but not yet implemented:
 
 ### Items
 
-Currently, there are only two types of items. All of the base species need to be unlocked by an item (eg, "Sheep Permit" to unlock the sheep), and DP can be received in varying amounts (100 - 100,000). 
-Filler DP items range from 100dp to 10,000dp, with amounts around 1,000 most common. Suggestions for additional items / item types are welcome.
+Currently, there are only three types of items:
+<ul>
+  <li>All of the base species need to be unlocked by an item (eg, "Sheep Permit" to unlock the sheep)</li>
+  <li>DP can be received in varying amounts (100 - 250,000)</li>
+  <li>If enabled in the YAML, up to 40 "Progressive DP/Min Bonus" items can be added to the item pool. Each of these received grants a permanent 
+    boost to your dp/min according to following formula: if you've received 'n' of these, you will have a bonus of 15(n<sup>2</sup>+n) dp/min.</li>
+</ul>
+
+
+For example:
+| \# "Progressive DP/Min Bonus" items received | Total bonus to dp/min |
+| ----------- | ----------- |
+| 0 | 0 |
+| 1 | 30 |
+| 2 | 90 |
+| 3 | 180 |
+| 5 | 450 |
+| 10 | 1650 |
+| 20 | 6300 |
+| 30 | 13950 |
+| 40 | 24600 |
+
+
+Filler DP items range from 100dp to 25,000dp, with amounts around 5,000 most common. Suggestions for additional items / item types are welcome.
 
 ## Known Issues 
 
