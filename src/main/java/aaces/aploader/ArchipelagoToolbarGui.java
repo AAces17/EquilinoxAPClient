@@ -77,7 +77,7 @@ public class ArchipelagoToolbarGui extends GuiComponent {
         boolean connected = APClient.Connected();
 
         addLabel(1.0F - (width + offset), super.pixelsToRelativeY(220.0F),
-                "Connection Status: " + (connected ? "Connected" : (APClient.Connecting ? "Connecting" : "Disconnected")));
+                "Connection Status: " + (connected ? "Connected" : (APClient.Connecting ? "Connecting..." : "Disconnected")));
         addLabel(0.6F - (width + offset), super.pixelsToRelativeY(280.0F),
                 "DP Received As Items: " + this.itemManager.getTotalDpReceived());
         int dpPerMinBonuses = this.itemManager.getReceivedDpPerMinBonuses();
