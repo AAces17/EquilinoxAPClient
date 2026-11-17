@@ -70,7 +70,7 @@ import java.util.*;
 @SuppressWarnings("unchecked")
 public class APBridge {
 
-    private static final String modVersion = "0.2.0";
+    private static final String modVersion = "0.2.1";
 
     public static String host = "";
     public static String slot = "";
@@ -903,7 +903,7 @@ public class APBridge {
         if(!saveLoaded) return;
 
         if(!SlotData.includeSizeChecks()) return;
-        if(SlotData.getGoalCondition() == GoalType.EVOLUTION && species.equals("Camel")) return;
+        if(SlotData.getGoalCondition() == GoalType.EVOLUTION && species.equals("Camel") && modVersionAtGeneration < 200) return;
 
         if (size >= 1.195){
             int locId = LocationManager.SpeciesAndSizeToSizeLocID.get(species + "1.20");
