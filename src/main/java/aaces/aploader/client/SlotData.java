@@ -80,7 +80,7 @@ public class SlotData {
         }
     }
 
-    public static boolean tasksRewardDP, freeEvolution, sizeChecks;
+    public static boolean tasksRewardDP, freeEvolution, sizeChecks, ignoreOutdatedClient;
 
     public static int startingDP, itempoolDP, goalCondition, dpPerMinBonusCount, evoGoalCount;
 
@@ -105,6 +105,9 @@ public class SlotData {
                     writer.writeString(species);
                 }
             }
+
+            writer.writeBoolean(ignoreOutdatedClient);
+
         } catch (Exception e) {
             APAgent.log("Error saving slot data: ");
             APAgent.log("\t" + e.getMessage());
@@ -141,6 +144,13 @@ public class SlotData {
                     evoGoalSpecies = new String[]{"Camel"};
                 }
             }
+
+            if (versionLastSavedOn >= 202) { // 0.2.2
+                ignoreOutdatedClient = reader.readBoolean();
+            } else {
+                ignoreOutdatedClient = false;
+            }
+
         } catch (Exception e) {
             APAgent.log("Error loading slot data: ");
             APAgent.log("\t" + e.getMessage());
@@ -161,6 +171,8 @@ public class SlotData {
         dpPerMinBonusCount = 0;
         evoGoalCount = 1;
         evoGoalSpecies = new String[]{"Camel"};
+
+        ignoreOutdatedClient = false;
     }
 
     /// Reads the slot data from the server. Technically only needs to happen the very first time we connect,
@@ -181,8 +193,25 @@ public class SlotData {
             apworldVersionString = "0.1.2";
         }
         long apworldVersion = APBridge.modVersionToLong(apworldVersionString);
+        long clientVersion = APBridge.modVersionToLong();
 
         APAgent.log("Connected to world generated on version " + apworldVersionString + " ("+apworldVersion+")");
+
+        if (apworldVersion > clientVersion && !ignoreOutdatedClient) {
+            APAgent.log("Potentially outdated client:");
+            APAgent.log("\tClient version: " + APBridge.getModVersion());
+            APAgent.log("\tServer version: " + apworldVersionString);
+
+            APBridge.sendNotification(
+                    "Outdated Client!",
+                    "Server: " + apworldVersionString + " vs Client: " + APBridge.getModVersion()
+            );
+
+            //TODO: Optionally stop world load? Should be as simple as setting APBridge.saveLoaded = false and quitting
+            //Could also add "don't ask again for this world" or something, that shouldn't be hard at all.
+            //The hardest part of all that would literally just be the pop up, and stopping the game from running while
+            // the pop up is open.
+        }
 
         if (apworldVersion >= 200) {
             dpPerMinBonusCount = client.slotData.dp_per_min_bonus_count;
