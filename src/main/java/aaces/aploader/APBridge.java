@@ -70,7 +70,7 @@ import java.util.*;
 @SuppressWarnings("unchecked")
 public class APBridge {
 
-    private static final String modVersion = "0.2.1";
+    private static final String modVersion = "0.2.2";
 
     public static String host = "";
     public static String slot = "";
@@ -233,7 +233,18 @@ public class APBridge {
             idField.setAccessible(true);
             int id = (int) idField.get(task);
 
-            trySendTaskCheck(task);
+            if (SlotData.getGoalCondition() == GoalType.COMPLETIONIST && task.name.equals("Completionist")){
+                if(tryGoal()){
+                    sendNotification("Goal Complete!", "You've completed every task!");
+                } else {
+                    sendNotification(
+                            "Goal Complete; Failed to send",
+                            "You've completed your goal condition, we failed to tell the server. Will try again on reconnect."
+                    );
+                }
+            } else {
+                trySendTaskCheck(task);
+            }
 
             boolean distribute_cash_rewards = SlotData.tasksRewardDP();
 
