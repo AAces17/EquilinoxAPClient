@@ -875,9 +875,15 @@ public class APBridge {
         if(SlotData.getGoalCondition() == GoalType.EVOLUTION) {
             if(SlotData.evolvedEnoughSpeciesToGoal(evolvedSpecies)){
                 if(tryGoal()){
-                    sendNotification("Goal Complete!", "You've evolved enough of the required species to complete your goal.");
+                    sendNotification(
+                            "Goal Complete!",
+                            "You've evolved enough of the required species to complete your goal."
+                    );
                 } else {
-                    sendNotification("Goal Complete; Failed to send", "You've completed your goal condition, we failed to tell the server. Will try again on reconnect.");
+                    sendNotification(
+                            "Goal Complete; Failed to send",
+                            "You've completed your goal condition, we failed to tell the server. Will try again on reconnect."
+                    );
                 }
             } else {
                 if(SlotData.numAlreadyEvolvedSpeciesNeededForGoal(Collections.singletonList(speciesName)) == 1){
@@ -1018,18 +1024,20 @@ public class APBridge {
     }
 
 
-    /// Converts the mod version X.Y.Z to the long XXYYZZ. Used for safer save file loading
+    /// Converts a provided version string X.Y.Z to the long XXYYZZ. Used for safer save file loading
     public static long modVersionToLong(String version){
         String[] exps = version.split("\\.");
         return 10000L * Integer.parseInt(exps[0]) + 100L * Integer.parseInt(exps[1]) + Integer.parseInt(exps[2]);
     }
 
-    private static long modVersionToLong(){
+
+    /// Converts the client mod version to a long using {@link modVersionToLong(String version)}
+    public static long modVersionToLong(){
         return modVersionToLong(modVersion);
     }
 
 
-    /// Used to undo {@link modVersionToLong()}
+    /// Used to undo {@link modVersionToLong(String version)}
     public static int[] getVersionFromLong(long number) {
         String numberAsString = String.valueOf(number);
         int major = 0;
@@ -1049,6 +1057,7 @@ public class APBridge {
     }
 
 
+    /// @return the intersection of `evolvedSpecies` with the set of required species for the Evolve Species goal
     public static List<String> getEvolvedSpeciesThatCountTowardsEvoGoal() {
         List<String> speciesList = new ArrayList<>();
         for (String species : evolvedSpecies){
@@ -1058,6 +1067,7 @@ public class APBridge {
     }
 
 
+    /// Converts the number of Progressive DP/Min Bonus items received into the total bonus to dp/min
     public static int dpPerMinBonus(int bonusItemsReceived){
         int n = bonusItemsReceived;
         return 15 * n * (n + 1);

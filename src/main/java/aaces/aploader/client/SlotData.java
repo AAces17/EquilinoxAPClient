@@ -48,10 +48,15 @@ public class SlotData {
         }
     }
 
+    /// Checks whether the provided list of species contains enough of the species in the set of
+    /// required species for the Evolve Species goal
     public static boolean evolvedEnoughSpeciesToGoal(List<String> evolvedSpecies){
         return numAlreadyEvolvedSpeciesNeededForGoal(evolvedSpecies) >= numNeededSpeciesForEvoGoal();
     }
 
+    /// Counts how many species from the provided list count towards the Evolve Species goal condition
+    /// @param evolvedSpecies the list to check against the list of required species
+    /// @return the number of species in `evolvedSpecies` that count towards the goal
     public static int numAlreadyEvolvedSpeciesNeededForGoal(List<String> evolvedSpecies){
         int numberEvolvedFromReqs = 0;
 
@@ -143,6 +148,7 @@ public class SlotData {
         }
     }
 
+    /// Loads "safe" default settings for use when saved slot data isn't found
     public static void loadDefaults(){
         tasksRewardDP = false;
         freeEvolution = true;
@@ -157,6 +163,10 @@ public class SlotData {
         evoGoalSpecies = new String[]{"Camel"};
     }
 
+    /// Reads the slot data from the server. Technically only needs to happen the very first time we connect,
+    /// since the slot data is then saved to the world's save file.
+    /// @param client the APClient instance to read slot data from
+    /// @return the version of the .apworld used at generation (as a long)
     public static long setCachedOnConnect(APClient client){
         tasksRewardDP = client.slotData.tasks_reward_dp == 1;
         freeEvolution = client.slotData.free_evolution == 1;
