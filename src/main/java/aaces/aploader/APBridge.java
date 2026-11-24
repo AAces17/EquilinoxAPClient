@@ -234,6 +234,7 @@ public class APBridge {
             int id = (int) idField.get(task);
 
             if (SlotData.getGoalCondition() == GoalType.COMPLETIONIST && task.name.equals("Completionist")){
+                APAgent.log("Trying to send completionist goal");
                 if(tryGoal()){
                     sendNotification("Goal Complete!", "You've completed every task!");
                 } else {
